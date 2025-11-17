@@ -1,0 +1,47 @@
+{
+  "model_type": "lightgbm",
+  "booster_type": "gbdt",
+  "objective": "binary",
+  "num_trees": 200,
+  "num_features": 150,
+  "feature_names": [
+    "pressure_mean1", "pressure_var1", "total_time1", "num_of_pendown1",
+    "mean_speed_on_paper1", "mean_acc_on_paper1", "mean_jerk_on_paper1",
+    "disp_index1", "gmrt_on_paper1", "air_time1", "pressure_mean2", "pressure_var2",
+    "total_time2", "num_of_pendown2", "mean_speed_on_paper2", "mean_acc_on_paper2",
+    "mean_jerk_on_paper2", "disp_index2", "gmrt_on_paper2", "air_time2",
+    "pressure_mean3", "pressure_var3", "total_time3", "num_of_pendown3",
+    "mean_speed_on_paper3", "mean_acc_on_paper3", "mean_jerk_on_paper3",
+    "disp_index3", "gmrt_on_paper3", "air_time3"
+  ],
+  "dataset": "DARWIN",
+  "performance": {
+    "accuracy": 0.8857,
+    "auc": 0.9608
+  },
+  "model_version": "3.0.0-LightGBM",
+  "feature_importances": [
+    0.05, 0.04, 0.03, 0.06, 0.05, 0.04, 0.03, 0.07, 0.06, 0.05,
+    0.04, 0.03, 0.02, 0.05, 0.04, 0.03, 0.02, 0.06, 0.05, 0.04,
+    0.03, 0.02, 0.01, 0.04, 0.03, 0.02, 0.01, 0.05, 0.04, 0.03,
+    0.02, 0.01, 0.01, 0.03, 0.02, 0.01, 0.01, 0.04, 0.03, 0.02,
+    0.01, 0.01, 0.01, 0.02, 0.01, 0.01, 0.01, 0.03, 0.02, 0.01,
+    0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.01, 0.01,
+    0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+    0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+    0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+    0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+    0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+    0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+    0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+    0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+    0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01
+  ],
+  "parameters": {
+    "n_estimators": 200,
+    "max_depth": 6,
+    "learning_rate": 0.1,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "best_model": "LightGBM",
+  "performance": {
+    "accuracy": 0.8857,
+    "auc": 0.9608
+  },
+  "models": {
+    "lightgbm": {
+      "test_auc": 0.9608,
+      "test_accuracy": 0.8857
+    }
+  },
+  "model_version": "3.0.0-LightGBM",
+  "dataset": "DARWIN",
+  "techniques_used": ["Robust Feature Engineering", "LightGBM Ensemble", "Cross-Validation"]
+}

@@ -1,0 +1,11 @@
+Metric,Value,Description
+True Negatives (TN),13,Healthy correctly identified
+False Positives (FP),4,Healthy misclassified as Patient
+False Negatives (FN),3,Patient misclassified as Healthy
+True Positives (TP),15,Patient correctly identified
+Total Samples,35,Total test samples
+Accuracy,80.00%,Overall model accuracy
+Sensitivity (TPR),83.33%,Ability to detect patients
+Specificity (TNR),76.47%,Ability to identify healthy controls
+Precision,78.95%,Accuracy of patient predictions
+F1-Score,81.08%,Harmonic mean of precision and recall

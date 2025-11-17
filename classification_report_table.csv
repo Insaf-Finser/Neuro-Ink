@@ -1,0 +1,4 @@
+Class,Precision,Recall (Sensitivity),F1-Score,Support
+Healthy (0),0.81,0.76,0.79,17
+Patient (1),0.79,0.83,0.81,18
+Average (Weighted),0.8,0.8,0.8,35

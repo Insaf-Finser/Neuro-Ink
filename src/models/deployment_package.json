@@ -1,0 +1,34 @@
+{
+  "model_version": "1.0.0",
+  "model_name": "logistic_regression",
+  "model_type": "sklearn",
+  "feature_names": [
+    "created_at",
+    "stroke_count",
+    "total_points",
+    "stroke_duration_mean",
+    "stroke_duration_std",
+    "total_drawing_time",
+    "pressure_mean",
+    "pressure_std",
+    "pressure_min",
+    "pressure_max"
+  ],
+  "feature_importance": null,
+  "performance_metrics": {
+    "cv_auc_mean": 0.34523809523809523,
+    "cv_auc_std": 0.2530987098270155,
+    "best_params": {
+      "C": 10.0,
+      "penalty": "l1",
+      "solver": "liblinear"
+    }
+  },
+  "risk_thresholds": {
+    "low": 0.3,
+    "moderate": 0.6,
+    "high": 0.8
+  },
+  "created_at": "unknown",
+  "description": "Trained logistic_regression model for cognitive risk assessment"
+}

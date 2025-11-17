@@ -1,0 +1,23 @@
+{
+  "dataset": "DARWIN",
+  "description": "Real clinical handwriting data from 174 individuals (89 AD patients, 85 healthy controls)",
+  "features": 450,
+  "models": {
+    "random_forest": {
+      "performance": "84.31% AUC, 80% accuracy",
+      "recommended": true,
+      "description": "Best performing model with excellent generalization"
+    },
+    "logistic_regression": {
+      "performance": "75.49% AUC, 69% accuracy",
+      "recommended": false,
+      "description": "Good performance, simpler model"
+    }
+  },
+  "clinical_validation": {
+    "sample_size": 174,
+    "ad_patients": 89,
+    "healthy_controls": 85,
+    "validation_status": "Clinically validated dataset"
+  }
+}
