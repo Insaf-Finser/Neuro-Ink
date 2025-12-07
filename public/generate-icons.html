@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Icon Generator - NeuroInk</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #667eea; }
+        .icon-preview {
+            margin: 20px 0;
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin: 10px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover { transform: translateY(-2px); }
+        .instructions {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 NeuroInk PWA Icon Generator</h1>
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Click "Generate All Icons" below</li>
+                <li>Save downloaded files to the <code>public</code> folder</li>
+                <li>Replace any existing files</li>
+            </ol>
+        </div>
+
+        <div class="icon-preview">
+            <h3>192x192 Icon</h3>
+            <canvas id="canvas192" width="192" height="192"></canvas><br>
+            <button onclick="downloadIcon('canvas192', 'logo192.png')">Download logo192.png</button>
+        </div>
+
+        <div class="icon-preview">
+            <h3>512x512 Icon</h3>
+            <canvas id="canvas512" width="512" height="512"></canvas><br>
+            <button onclick="downloadIcon('canvas512', 'logo512.png')">Download logo512.png</button>
+        </div>
+
+        <div class="icon-preview">
+            <h3>64x64 Icon (Favicon)</h3>
+            <canvas id="canvas64" width="64" height="64"></canvas><br>
+            <button onclick="downloadIcon('canvas64', 'favicon.ico')">Download favicon.ico</button>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="generateAllIcons()" style="font-size: 18px; padding: 15px 30px;">
+                🚀 Generate All Icons
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function drawIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, size, size);
+            
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            
+            ctx.fillStyle = gradient;
+            const cornerRadius = size * 0.15;
+            ctx.beginPath();
+            ctx.moveTo(cornerRadius, 0);
+            ctx.lineTo(size - cornerRadius, 0);
+            ctx.quadraticCurveTo(size, 0, size, cornerRadius);
+            ctx.lineTo(size, size - cornerRadius);
+            ctx.quadraticCurveTo(size, size, size - cornerRadius, size);
+            ctx.lineTo(cornerRadius, size);
+            ctx.quadraticCurveTo(0, size, 0, size - cornerRadius);
+            ctx.lineTo(0, cornerRadius);
+            ctx.quadraticCurveTo(0, 0, cornerRadius, 0);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${size * 0.4}px Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('NI', size / 2, size / 2);
+        }
+        
+        function downloadIcon(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        }
+        
+        function generateAllIcons() {
+            setTimeout(() => downloadIcon('canvas192', 'logo192.png'), 100);
+            setTimeout(() => downloadIcon('canvas512', 'logo512.png'), 300);
+            setTimeout(() => downloadIcon('canvas64', 'favicon.ico'), 500);
+            alert('All icons generated! Check your downloads folder.');
+        }
+        
+        window.onload = function() {
+            drawIcon('canvas192', 192);
+            drawIcon('canvas512', 512);
+            drawIcon('canvas64', 64);
+        };
+    </script>
+</body>
+</html>
+
