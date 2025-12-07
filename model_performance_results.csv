@@ -1,2 +1,0 @@
-model_name,accuracy,precision,recall,f1_score,roc_auc,average_precision,cv_mean,cv_std,n_samples,n_features,train_size,test_size
-LightGBM,0.8,0.7894736842105263,0.8333333333333334,0.8108108108108109,0.9084967320261438,0.9187435923400837,0.856084656084656,0.05536879669736585,174,450,139,35
