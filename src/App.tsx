@@ -73,19 +73,7 @@ function App() {
         <Route path="/test/rapid_writing" element={<RequireConsent><RapidWritingTest /></RequireConsent>} />
         <Route path="/test/comprehensive_assessment" element={<RequireConsent><ComprehensiveAssessmentTest /></RequireConsent>} />
         
-        {/* Generic route for remaining tasks */}
-        {HANDWRITING_TASKS.filter(task => 
-          !['circle_drawing', 'square_drawing', 'triangle_drawing', 'pentagon_drawing', 'spiral_drawing', 'letter_copy', 'word_memory', 'repetitive_writing', 'dot_connection', 'word_copy', 'number_copy', 'sentence_memory', 'signature_practice', 'complex_figure_copy', 'line_tracing', 'name_memory', 'number_memory', 'rapid_writing', 'comprehensive_assessment'].includes(task.id)
-        ).map(task => {
-          console.log('App.tsx - Registering generic route for task:', task.id, 'path:', `/test/${task.id}`);
-          return (
-            <Route 
-              key={task.id} 
-              path={`/test/${task.id}`} 
-              element={<RequireConsent><HandwritingTaskTest /></RequireConsent>} 
-            />
-          );
-                  })}
+        {/* Generic route for remaining tasks - all tasks are now explicitly routed above */}
                   <Route path="/results" element={<Results />} />
                   <Route path="/ai-analysis" element={<AIAnalysisResults />} />
                   <Route path="/comprehensive-results" element={<ComprehensiveResults />} />

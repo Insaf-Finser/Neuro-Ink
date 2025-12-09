@@ -1,122 +1,50 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { motion } from 'framer-motion';
-import { 
-  ArrowRight, 
-  ArrowLeft, 
-  RotateCcw, 
-  CheckCircle,
-  AlertCircle,
-  Play,
-  Pause,
-  Clock,
-  Target,
-  Shapes
-} from 'lucide-react';
-import { stylusInputService, StylusPoint } from '../../services/stylusInputService';
-import { useTaskCompletion } from '../../hooks/useTaskCompletion';
+import { RotateCcw, Play, Pause, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { StylusPoint } from '../../services/stylusInputService';
+import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
 
-const TestContainer = styled.div`
-  padding: 40px 0;
-  min-height: calc(100vh - 160px);
-`;
-
-const DrawingArea = styled.div`
-  border: 3px dashed #667eea;
-  border-radius: 16px;
-  background: #fafbff;
-  min-height: 500px;
-  position: relative;
-  margin-bottom: 32px;
-  overflow: hidden;
-`;
-
-const Canvas = styled.canvas`
-  width: 100%;
-  height: 100%;
-  cursor: crosshair;
-  display: block;
-  background: white;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-`;
-
-const ReferenceArea = styled.div`
-  background: #f8fafc;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
-  text-align: center;
-`;
-
-const ReferenceFigure = styled.div`
-  width: 200px;
-  height: 200px;
-  margin: 0 auto;
-  position: relative;
-  border: 2px solid #667eea;
-  border-radius: 8px;
-  background: white;
-`;
-
-const Pentagon1 = styled.div`
-  position: absolute;
-  top: 50px;
-  left: 50px;
-  width: 100px;
-  height: 100px;
-  border: 3px solid #667eea;
-  transform: rotate(0deg);
-  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
-`;
-
-const Pentagon2 = styled.div`
-  position: absolute;
-  top: 30px;
-  left: 30px;
-  width: 140px;
-  height: 140px;
-  border: 3px solid #667eea;
-  transform: rotate(36deg);
-  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+const Container = styled.div`
+  padding: 16px 0;
 `;
 
 const Instructions = styled.div`
-  background: #fef3c7;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   border: 2px solid #f59e0b;
   border-radius: 12px;
   padding: 16px;
-  margin-bottom: 24px;
-  text-align: center;
+  margin-bottom: 20px;
+  color: #92400e;
 `;
 
-const InstructionsText = styled.div`
-  font-weight: 600;
-  color: #d97706;
-  font-size: 16px;
+const InstructionText = styled.p`
+  margin: 8px 0;
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.6;
 `;
 
 const Controls = styled.div`
   display: flex;
-  gap: 16px;
+  gap: 12px;
   justify-content: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 `;
 
-const ControlButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
-  padding: 12px 24px;
+const Button = styled.button<{ $variant?: 'primary' | 'danger' | 'secondary' }>`
+  padding: 12px 20px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 
   ${props => {
     switch (props.$variant) {
@@ -124,51 +52,33 @@ const ControlButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dang
         return `
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
-          &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-          }
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+          &:active { transform: scale(0.98); }
         `;
       case 'danger':
         return `
           background: #ef4444;
           color: white;
-          &:hover {
-            background: #dc2626;
-          }
+          &:active { transform: scale(0.98); }
         `;
       default:
         return `
           background: white;
           color: #667eea;
           border: 2px solid #667eea;
-          &:hover {
-            background: #667eea;
-            color: white;
-          }
+          &:active { transform: scale(0.98); }
         `;
     }
   }}
 `;
 
-const Timer = styled.div`
-  text-align: center;
-  margin-bottom: 24px;
-`;
-
-const TimerText = styled.div`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #667eea;
-`;
-
-const StatusIndicator = styled.div<{ $status: 'waiting' | 'drawing' | 'completed' }>`
+const StatusCard = styled.div<{ $status: 'waiting' | 'drawing' | 'completed' }>`
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px;
+  padding: 14px 18px;
   border-radius: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   background: ${props => 
     props.$status === 'completed' ? '#f0fdf4' :
     props.$status === 'drawing' ? '#fef3c7' : '#f3f4f6'
@@ -179,169 +89,66 @@ const StatusIndicator = styled.div<{ $status: 'waiting' | 'drawing' | 'completed
   };
 `;
 
-const StatusText = styled.div<{ $status: string }>`
+const StatusText = styled.span<{ $status: string }>`
   font-weight: 600;
+  font-size: 15px;
   color: ${props => 
     props.$status === 'completed' ? '#059669' :
     props.$status === 'drawing' ? '#d97706' : '#6b7280'
   };
 `;
 
-const ButtonContainer = styled.div`
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  margin-top: 32px;
+const Timer = styled.div`
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #f8f9ff;
+  border-radius: 10px;
 `;
 
-const Button = styled(Link)<{ $primary?: boolean }>`
-  padding: 16px 32px;
-  border-radius: 12px;
-  text-decoration: none;
-  font-size: 16px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  transition: all 0.3s ease;
+const TimerText = styled.div`
+  font-size: 18px;
+  font-weight: 700;
+  color: #667eea;
+`;
 
-  ${props => props.$primary ? `
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
-    }
-  ` : `
-    background: white;
-    color: #667eea;
-    border: 2px solid #667eea;
-
-    &:hover {
-      background: #667eea;
-      color: white;
-    }
-  `}
+const PauseOverlay = styled.div`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 24px 32px;
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  z-index: 10;
+  pointer-events: none;
 `;
 
 const ComplexFigureCopyTest: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [showStartButton, setShowStartButton] = useState(true);
-  const [timeElapsed, setTimeElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [currentStroke, setCurrentStroke] = useState<Array<{ x: number; y: number; pressure: number; timestamp: number; tiltX?: number; tiltY?: number; rotation?: number }>>([]);
-  const [stylusCapabilities, setStylusCapabilities] = useState<any>(null);
-  const [timeRemaining, setTimeRemaining] = useState<number | null>(120); // 120 seconds for complex figure copy
-  
-  const isPausedRef = useRef(false);
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(120);
 
-  useEffect(() => {
-    isPausedRef.current = isPaused;
-  }, [isPaused]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Set canvas size
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-    
-    // Configure drawing context
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = '#667eea';
-
-    // Initialize stylus input service
-    stylusInputService.initialize(canvas);
-    setStylusCapabilities(stylusInputService.getCapabilities());
-
-    // Setup stylus event listeners
-    const handleStrokeStart = (event: CustomEvent) => {
-      if (isPausedRef.current) return;
-      const point = event.detail as StylusPoint;
-      setIsDrawing(true);
-      if (!hasStarted) {
-        setHasStarted(true);
-      }
-      setCurrentStroke([{
-        x: point.x,
-        y: point.y,
-        pressure: point.pressure,
-        timestamp: point.timestamp,
-        tiltX: point.tiltX,
-        tiltY: point.tiltY,
-        rotation: point.rotation
-      }]);
-    };
-
-    const handlePointAdded = (event: CustomEvent) => {
-      if (isPausedRef.current) return;
-      const point = event.detail as StylusPoint;
-      setCurrentStroke(prev => [...prev, {
-        x: point.x,
-        y: point.y,
-        pressure: point.pressure,
-        timestamp: point.timestamp,
-        tiltX: point.tiltX,
-        tiltY: point.tiltY,
-        rotation: point.rotation
-      }]);
-      
-      // Draw the stroke
-      if (ctx && currentStroke.length > 0) {
-        const lastPoint = currentStroke[currentStroke.length - 1];
-        ctx.beginPath();
-        ctx.moveTo(lastPoint.x, lastPoint.y);
-        ctx.lineTo(point.x, point.y);
-        ctx.stroke();
-      }
-    };
-
-    const handleStrokeEnd = (event: CustomEvent) => {
-      if (isPausedRef.current) return;
-      setIsDrawing(false);
-      setCurrentStroke([]);
-    };
-
-    // Add event listeners
-    canvas.addEventListener('stylus:strokeStart', handleStrokeStart as EventListener);
-    canvas.addEventListener('stylus:pointAdded', handlePointAdded as EventListener);
-    canvas.addEventListener('stylus:strokeEnd', handleStrokeEnd as EventListener);
-
-    return () => {
-      canvas.removeEventListener('stylus:strokeStart', handleStrokeStart as EventListener);
-      canvas.removeEventListener('stylus:pointAdded', handlePointAdded as EventListener);
-      canvas.removeEventListener('stylus:strokeEnd', handleStrokeEnd as EventListener);
-    };
-  }, [currentStroke, hasStarted]);
-
-  // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
-    if (hasStarted && !isPaused) {
+    if (hasStarted && !isPaused && timeRemaining !== null && timeRemaining > 0) {
       interval = setInterval(() => {
         setTimeElapsed(prev => prev + 1);
-        if (timeRemaining !== null) {
-          setTimeRemaining(prev => {
-            const newTime = prev! - 1;
-            if (newTime <= 0) {
-              setIsPaused(true);
-            }
-            return newTime;
-          });
-        }
+        setTimeRemaining(prev => {
+          if (prev === null || prev <= 1) {
+            setIsPaused(true);
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
     }
     return () => {
@@ -349,35 +156,39 @@ const ComplexFigureCopyTest: React.FC = () => {
     };
   }, [hasStarted, isPaused, timeRemaining]);
 
-  const handleStartTask = () => {
-    setHasStarted(true);
-    setShowStartButton(false);
-    setTimeElapsed(0);
-    setTimeRemaining(30);
+  // Handle task completion
+  useEffect(() => {
+    if (timeRemaining === 0 && hasStarted) {
+      // Task completed - timer ran out
+      setIsDrawing(false);
+      setIsPaused(true);
+    }
+  }, [timeRemaining, hasStarted]);
+
+  const handleCanvasTap = () => {
+    if (!hasStarted) {
+      setHasStarted(true);
+      setTimeRemaining(120);
+      setIsPaused(false);
+    }
+  };
+
+  const handleStrokeStart = (point: StylusPoint) => {
+    if (isPaused || !hasStarted) return;
+    setIsDrawing(true);
+  };
+
+  const handleStrokeEnd = () => {
+    if (isPaused) return;
+    setIsDrawing(false);
   };
 
   const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvasRef.current?.clear();
     setHasStarted(false);
-    setShowStartButton(true);
-    setShowStartButton(true);
+    setIsDrawing(false);
     setTimeElapsed(0);
     setTimeRemaining(120);
-  };
-
-  const handlePauseToggle = () => {
-    setIsPaused(prev => !prev);
-  };
-
-  const handleQuitTest = () => {
-    clearCanvas();
-    navigate('/tasks');
   };
 
   const formatTime = (seconds: number) => {
@@ -392,150 +203,84 @@ const ComplexFigureCopyTest: React.FC = () => {
     return 'waiting';
   };
 
-  const getStatusText = () => {
-    if (timeRemaining === 0) return 'Time\'s up!';
-    if (isDrawing) return 'Drawing in progress...';
-    if (hasStarted) return 'Continue drawing...';
-    return 'Ready to start';
-  };
-
-  const instructionsContent = (
-    <>
-      <p>Copy the figure exactly as shown</p>
-      <p>Pay attention to the intersection points</p>
-      <p>Keep proportions accurate</p>
-      <p><strong>Time Limit: 120 seconds</strong></p>
-    </>
+  const instructions = (
+    <Instructions>
+      <InstructionText>• Copy the figure exactly as shown</InstructionText>
+      <InstructionText>• Pay attention to the intersection points</InstructionText>
+      <InstructionText>• Keep proportions accurate</InstructionText>
+      <InstructionText style={{ marginTop: '12px', fontWeight: 700 }}>
+        ⏱️ Time Limit: 120 seconds
+      </InstructionText>
+    </Instructions>
   );
 
   return (
-    <TestContainer>
-      <div className="container">
-        <TestHarness title="Complex Figure Copy"
-          instructions={instructionsContent}
-          onQuit={handleQuitTest}
-          onPause={handlePauseToggle} step={1} totalSteps={21}
-        >
-          <ReferenceArea>
-            <ReferenceFigure>
-              <Pentagon2 />
-              <Pentagon1 />
-            </ReferenceFigure>
-          </ReferenceArea>
+    <Container>
+      <TestHarness
+        title="Complex Figure Copy Test"
+        step={9}
+        totalSteps={21}
+        instructions={instructions}
+        onQuit={() => navigate('/tasks')}
+        onPause={() => setIsPaused(prev => !prev)}
+      >
+        <StatusCard $status={getStatus()}>
+          {getStatus() === 'completed' ? (
+            <CheckCircle size={20} />
+          ) : getStatus() === 'drawing' ? (
+            <AlertCircle size={20} />
+          ) : (
+            <Clock size={20} />
+          )}
+          <StatusText $status={getStatus()}>
+            {timeRemaining === 0 ? 'Time\'s up!' : 
+             isDrawing ? 'Drawing in progress...' : 
+             hasStarted ? 'Continue drawing...' : 'Ready to start'}
+            {isPaused && ' (Paused)'}
+          </StatusText>
+        </StatusCard>
 
-          <Instructions>
-            <InstructionsText>
-              Copy this intersecting pentagon figure exactly as shown
-            </InstructionsText>
-          </Instructions>
-
-          <StatusIndicator $status={getStatus()}>
-            {getStatus() === 'completed' ? (
-              <CheckCircle size={20} />
-            ) : getStatus() === 'drawing' ? (
-              <Shapes size={20} />
-            ) : (
-              <AlertCircle size={20} />
-            )}
-            <StatusText $status={getStatus()}>
-              {getStatusText()}{isPaused ? ' (Paused)' : ''}
-            </StatusText>
-          </StatusIndicator>
-
+        {hasStarted && (
           <Timer>
             <TimerText>
-              Time: {formatTime(timeElapsed)}
-              {timeRemaining !== null && (
-                <span style={{ marginLeft: '16px', color: timeRemaining < 10 ? '#ef4444' : '#667eea' }}>
-                  Remaining: {formatTime(timeRemaining)}
-                </span>
-              )}
+              ⏱️ {formatTime(timeElapsed)} / Remaining: {timeRemaining !== null ? formatTime(timeRemaining) : '--'}
             </TimerText>
           </Timer>
+        )}
 
-          <DrawingArea>
-            <Canvas ref={canvasRef} />
-            <div style={{ 
-              position: 'absolute', 
-              top: '50%', 
-              left: '50%', 
-              transform: 'translate(-50%, -50%)',
-              color: '#9ca3af',
-              fontSize: '16px',
-              fontWeight: '500',
-              pointerEvents: 'none',
-              zIndex: 1
-            }}>
-              {hasStarted ? 'Draw the figure here...' : 'Click to begin drawing'}
-            </div>
-            {stylusCapabilities && (
-              <div style={{ 
-                position: 'absolute', 
-                top: '10px', 
-                right: '10px', 
-                background: 'rgba(102, 126, 234, 0.9)', 
-                color: 'white', 
-                padding: '8px 12px', 
-                borderRadius: '8px', 
-                fontSize: '12px',
-                fontWeight: '600'
-              }}>
-                {stylusCapabilities.pressure ? 'Stylus Detected' : 'Touch/Mouse Mode'}
-              </div>
-            )}
-            {isPaused && (
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                background: 'rgba(0, 0, 0, 0.8)',
-                color: 'white',
-                padding: '20px',
-                borderRadius: '12px',
-                fontSize: '18px',
-                fontWeight: '600'
-              }}>
-                Task Paused
-              </div>
-            )}
-          </DrawingArea>
+        <div style={{ position: 'relative' }}>
+          <DrawingCanvas
+            ref={canvasRef}
+            disabled={isPaused || !hasStarted}
+            placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Draw here...') : 'Tap canvas to start test'}
+            onTap={handleCanvasTap}
+            onStrokeStart={handleStrokeStart}
+            onStrokeEnd={handleStrokeEnd}
+          />
+          {isPaused && hasStarted && timeRemaining !== 0 && <PauseOverlay>⏸️ Task Paused</PauseOverlay>}
+          {timeRemaining === 0 && hasStarted && (
+            <PauseOverlay style={{ background: 'rgba(16, 185, 129, 0.9)' }}>
+              ✓ Test Completed
+            </PauseOverlay>
+          )}
+        </div>
 
+        {hasStarted && (
           <Controls>
-            {showStartButton && (
-              <ControlButton onClick={handleStartTask} $variant="primary">
-                <Play size={16} />
-                Start Task
-              </ControlButton>
-            )}
-            {hasStarted && (
-              <>
-                <ControlButton onClick={clearCanvas} $variant="danger">
-                  <RotateCcw size={16} />
-                  Clear
-                </ControlButton>
-                <ControlButton onClick={handlePauseToggle} $variant="secondary">
-                  {isPaused ? <Play size={16} /> : <Pause size={16} />}
-                  {isPaused ? 'Resume' : 'Pause'}
-                </ControlButton>
-                
-              </>
+            <Button $variant="danger" onClick={clearCanvas}>
+              <RotateCcw size={16} />
+              Clear
+            </Button>
+            {timeRemaining !== 0 && (
+              <Button $variant="secondary" onClick={() => setIsPaused(prev => !prev)}>
+                {isPaused ? <Play size={16} /> : <Pause size={16} />}
+                {isPaused ? 'Resume' : 'Pause'}
+              </Button>
             )}
           </Controls>
-
-          <ButtonContainer>
-            <Button to="/test/number_copy" $primary={false}>
-              <ArrowLeft size={20} />
-              Previous Task
-            </Button>
-            <Button to="/test/line_tracing" $primary={true}>
-              Next Task
-              <ArrowRight size={20} />
-            </Button>
-          </ButtonContainer>
-        </TestHarness>
-      </div>
-    </TestContainer>
+        )}
+      </TestHarness>
+    </Container>
   );
 };
 
