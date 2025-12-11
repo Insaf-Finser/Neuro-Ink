@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+
 import { RotateCcw, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
@@ -127,23 +128,109 @@ const PauseOverlay = styled.div`
   pointer-events: none;
 `;
 
+const TextInputWrapper = styled.div`
+  position: relative;
+  margin-bottom: 20px;
+`;
+
+// single editable textarea used for input
+
+const TextArea = styled.textarea`
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid #667eea;
+  font-size: 18px;
+  line-height: 1.6;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+  color: #333;
+  background: white;
+`;
+
+const MemorizePhaseBox = styled.div`
+  background: linear-gradient(135deg, #e0e7ff 0%, #f0f4ff 100%);
+  border: 3px solid #667eea;
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+  margin-bottom: 24px;
+`;
+
+const NamesDisplay = styled.div`
+  font-size: 28px;
+  font-weight: 700;
+  color: #667eea;
+  margin-bottom: 16px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+`;
+
+const MemorizeTimer = styled.div`
+  font-size: 32px;
+  font-weight: 700;
+  color: #ef4444;
+  margin-top: 16px;
+`;
+
+const ResultsDisplay = styled.div`
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 3px solid #10b981;
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+  margin-bottom: 24px;
+`;
+
+const ResultsText = styled.div`
+  font-size: 32px;
+  font-weight: 700;
+  color: #059669;
+  letter-spacing: 1px;
+`;
+
 const NameMemoryTest: React.FC = () => {
-  const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
   
-  const [isDrawing, setIsDrawing] = useState(false);
+  const [inputText, setInputText] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
-const [timeElapsed, setTimeElapsed] = useState(0);
-  const [timeRemaining, setTimeRemaining] = useState<number | null>(90);
 
+  const [isInMemorizePhase, setIsInMemorizePhase] = useState(true);
+  const [memorizeTimeRemaining, setMemorizeTimeRemaining] = useState(30);
+  const [timeElapsed, setTimeElapsed] = useState(0);
+
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(90);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [score, setScore] = useState(0);
+
+  const NAMES_TO_REMEMBER = ['JOHN', 'MARY', 'DAVID', 'SARAH', 'MICHAEL'];
+
+  const calculateScore = (text: string): number => {
+    const userText = text.toUpperCase();
+    let correctCount = 0;
+    for (const name of NAMES_TO_REMEMBER) {
+      if (userText.includes(name)) {
+        correctCount++;
+      }
+    }
+    return correctCount;
+  };
+
+  // Memorization phase timer (30 seconds)
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
-    if (hasStarted && timeRemaining !== null && timeRemaining > 0) {
+
+    if (isInMemorizePhase && memorizeTimeRemaining > 0) {
       interval = setInterval(() => {
-        setTimeElapsed(prev => prev + 1);
-        setTimeRemaining(prev => {
-          if (prev === null || prev <= 1) {
-return 0;
+        setMemorizeTimeRemaining(prev => {
+          if (prev <= 1) {
+            // Auto-start the test after 30 seconds
+            setIsInMemorizePhase(false);
+            setHasStarted(true);
+            setTimeRemaining(90);
+            return 0;
+
           }
           return prev - 1;
         });
@@ -152,38 +239,74 @@ return 0;
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [hasStarted, timeRemaining]);
 
-  // Handle task completion
+  }, [isInMemorizePhase, memorizeTimeRemaining]);
+
+
+  // Main test timer (90 seconds)
   useEffect(() => {
-    if (timeRemaining === 0 && hasStarted) {
-      // Task completed - timer ran out
-      setIsDrawing(false);
-}
-  }, [timeRemaining, hasStarted]);
 
-  const handleCanvasTap = () => {
-    if (!hasStarted) {
-      setHasStarted(true);
-      setTimeRemaining(90);
+    let interval: NodeJS.Timeout | undefined;
+    if (hasStarted && !isSubmitted && timeRemaining !== null && timeRemaining > 0) {
+      interval = setInterval(() => {
+        setTimeElapsed(prev => prev + 1);
+        setTimeRemaining(prev => {
+          if (prev === null || prev <= 1) {
+            // Auto-submit when time runs out
+            const finalScore = calculateScore(inputText);
+            setScore(finalScore);
+            setIsSubmitted(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [hasStarted, isSubmitted, timeRemaining, inputText]);
+
+  const handleStartTest = () => {
+    setIsInMemorizePhase(false);
+    setHasStarted(true);
+    setTimeRemaining(90);
+
+
+  };
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+
+  const handleTextChange = (value: string) => {
+    if (isSubmitted || !hasStarted) return;
+    setInputText(value);
   };
 
-  const handleStrokeStart = (point: StylusPoint) => {
-    if (!hasStarted) return;
-    setIsDrawing(true);
+  const handleSubmit = () => {
+    const finalScore = calculateScore(inputText);
+    setScore(finalScore);
+    setIsSubmitted(true);
+
   };
 
-  const handleStrokeEnd = () => {
-        setIsDrawing(false);
-  };
+  useEffect(() => {
+    if (hasStarted && !isSubmitted) {
+      textareaRef.current?.focus();
+    }
+    if (isSubmitted) {
+      textareaRef.current?.blur();
+    }
+  }, [hasStarted, isSubmitted]);
 
-  const clearCanvas = () => {
-    canvasRef.current?.clear();
+  const clearInput = () => {
+    setInputText('');
     setHasStarted(false);
-    setIsDrawing(false);
+    setIsInMemorizePhase(true);
+    setMemorizeTimeRemaining(30);
     setTimeElapsed(0);
     setTimeRemaining(90);
+    setIsSubmitted(false);
+    setScore(0);
   };
 
   const formatTime = (seconds: number) => {
@@ -194,7 +317,7 @@ return 0;
 
   const getStatus = () => {
     if (timeRemaining === 0) return 'completed';
-    if (isDrawing) return 'drawing';
+    if (inputText.length > 0) return 'drawing';
     return 'waiting';
   };
 
@@ -215,58 +338,92 @@ return 0;
         title="Name Memory Test"
         step={ 14 }
         totalSteps={21}
-        instructions={instructions}
-        isComplete={timeRemaining === 0 && hasStarted}
-        onRetry={clearCanvas}
-        onNext={() => navigate('/test/clock_drawing')}
-        canProceed={timeRemaining === 0 && hasStarted}
+
+        instructions={isInMemorizePhase || hasStarted ? null : instructions}
+        onQuit={() => navigate('/tasks')}
+        onPause={() => {}}
       >
-        <StatusCard $status={getStatus()}>
-          {getStatus() === 'completed' ? (
-            <CheckCircle size={20} />
-          ) : getStatus() === 'drawing' ? (
-            <AlertCircle size={20} />
-          ) : (
-            <Clock size={20} />
-          )}
-          <StatusText $status={getStatus()}>
-            {timeRemaining === 0 ? 'Time\'s up!' : 
-             isDrawing ? 'Drawing in progress...' : 
-             hasStarted ? 'Continue drawing...' : 'Ready to start'}
-          </StatusText>
-        </StatusCard>
+        {isInMemorizePhase ? (
+          <>
+            <MemorizePhaseBox>
+              <div style={{ marginBottom: '16px', fontSize: '18px', fontWeight: '600', color: '#667eea' }}>
+                Remember these names:
+              </div>
+              <NamesDisplay>
+                JOHN • MARY • DAVID • SARAH • MICHAEL
+              </NamesDisplay>
+              <MemorizeTimer>
+                {memorizeTimeRemaining}s
+              </MemorizeTimer>
+              <div style={{ marginTop: '16px', fontSize: '14px', color: '#6b7280' }}>
+                {memorizeTimeRemaining > 0 
+                  ? 'Test will start automatically when timer ends' 
+                  : 'Starting test now...'}
+              </div>
+            </MemorizePhaseBox>
+            {memorizeTimeRemaining > 0 && (
+              <Button $variant="primary" onClick={handleStartTest} style={{ width: '100%', justifyContent: 'center' }}>
+                Start Test Now
+              </Button>
+            )}
+          </>
+        ) : (
+          <>
+            <StatusCard $status={getStatus()}>
+              {getStatus() === 'completed' ? (
+                <CheckCircle size={20} />
+              ) : getStatus() === 'drawing' ? (
+                <AlertCircle size={20} />
+              ) : (
+                <Clock size={20} />
+              )}
+              <StatusText $status={getStatus()}>
+                {timeRemaining === 0 ? 'Time\'s up!' : 
+                 inputText.length > 0 ? 'Writing in progress...' : 
+                 hasStarted ? 'Continue writing...' : 'Ready to start'}
+              </StatusText>
+            </StatusCard>
 
-        {hasStarted && (
-          <Timer>
-            <TimerText>
-              ⏱️ {formatTime(timeElapsed)} / Remaining: {timeRemaining !== null ? formatTime(timeRemaining) : '--'}
-            </TimerText>
-          </Timer>
-        )}
+            {hasStarted && !isSubmitted && (
+              <Timer>
+                <TimerText>
+                  ⏱️ {formatTime(timeElapsed)} / Remaining: {timeRemaining !== null ? formatTime(timeRemaining) : '--'}
+                </TimerText>
+              </Timer>
+            )}
 
-        <div style={{ position: 'relative' }}>
-          <DrawingCanvas
-            ref={canvasRef}
-            disabled={!hasStarted}
-            placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Draw here...') : 'Tap canvas to start test'}
-            onTap={handleCanvasTap}
-            onStrokeStart={handleStrokeStart}
-            onStrokeEnd={handleStrokeEnd}
-          />
-          {timeRemaining === 0 && hasStarted && (
-            <PauseOverlay style={{ background: 'rgba(16, 185, 129, 0.9)' }}>
-              ✓ Test Completed
-            </PauseOverlay>
-          )}
-        </div>
+            {isSubmitted ? (
+              <ResultsDisplay>
+                <ResultsText>Answered: {score}/5</ResultsText>
+              </ResultsDisplay>
+            ) : (
+              <TextInputWrapper>
+                <TextArea
+                  ref={textareaRef}
+                  value={inputText}
+                  onChange={(e) => handleTextChange(e.target.value)}
+                  placeholder={timeRemaining === 0 ? "Time's up! Test completed." : 'Type here...'}
+                  disabled={isSubmitted || timeRemaining === 0 || !hasStarted}
+                />
+              </TextInputWrapper>
+            )}
 
-        {hasStarted && (
-          <Controls>
-            <Button $variant="danger" onClick={clearCanvas}>
-              <RotateCcw size={16} />
-              Retry
-            </Button>
-          </Controls>
+            {hasStarted && (
+              <Controls>
+                <Button $variant="danger" onClick={clearInput}>
+                  <RotateCcw size={16} />
+                  Clear
+                </Button>
+                {!isSubmitted && (
+                  <Button $variant="primary" onClick={handleSubmit}>
+                    <Send size={16} />
+                    Submit
+                  </Button>
+                )}
+              </Controls>
+            )}
+          </>
+
         )}
       </TestHarness>
     </Container>
