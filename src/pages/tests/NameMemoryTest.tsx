@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { RotateCcw, Play, Pause, CheckCircle, AlertCircle, Clock, Delete } from 'lucide-react';
+import { RotateCcw, CheckCircle, AlertCircle, Clock, Send } from 'lucide-react';
 import TestHarness from '../../components/TestHarness';
 
 const Container = styled.div`
@@ -130,76 +130,61 @@ const TextInputWrapper = styled.div`
   margin-bottom: 20px;
 `;
 
-const TextDisplay = styled.div`
-  background: white;
-  border: 2px solid #667eea;
-  border-radius: 12px;
-  padding: 16px;
-  min-height: 200px;
-  font-size: 18px;
-  word-wrap: break-word;
-  line-height: 1.6;
-  margin-bottom: 16px;
-  position: relative;
-  font-family: 'Courier New', monospace;
-  color: #333;
-`;
+// single editable textarea used for input
 
-const KeyboardContainer = styled.div`
-  background: #f3f4f6;
-  border: 2px solid #d1d5db;
-  border-radius: 12px;
+const TextArea = styled.textarea`
+  width: 100%;
+  min-height: 120px;
   padding: 12px;
-`;
-
-const KeyboardRow = styled.div`
-  display: flex;
-  gap: 6px;
-  margin-bottom: 6px;
-  justify-content: center;
-  flex-wrap: wrap;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-`;
-
-const Key = styled.button<{ $size?: 'normal' | 'large' | 'small' }>`
-  padding: ${props => {
-    switch (props.$size) {
-      case 'large':
-        return '12px 16px';
-      case 'small':
-        return '8px 6px';
-      default:
-        return '10px 12px';
-    }
-  }};
-  border: 1px solid #9ca3af;
+  border-radius: 12px;
+  border: 2px solid #667eea;
+  font-size: 18px;
+  line-height: 1.6;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+  color: #333;
   background: white;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: ${props => {
-    switch (props.$size) {
-      case 'small':
-        return '32px';
-      default:
-        return '40px';
-    }
-  }};
-  
-  &:active {
-    background: #667eea;
-    color: white;
-    transform: scale(0.95);
-  }
+`;
 
-  &:hover {
-    background: #e5e7eb;
-  }
+const MemorizePhaseBox = styled.div`
+  background: linear-gradient(135deg, #e0e7ff 0%, #f0f4ff 100%);
+  border: 3px solid #667eea;
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+  margin-bottom: 24px;
+`;
+
+const NamesDisplay = styled.div`
+  font-size: 28px;
+  font-weight: 700;
+  color: #667eea;
+  margin-bottom: 16px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+`;
+
+const MemorizeTimer = styled.div`
+  font-size: 32px;
+  font-weight: 700;
+  color: #ef4444;
+  margin-top: 16px;
+`;
+
+const ResultsDisplay = styled.div`
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 3px solid #10b981;
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+  margin-bottom: 24px;
+`;
+
+const ResultsText = styled.div`
+  font-size: 32px;
+  font-weight: 700;
+  color: #059669;
+  letter-spacing: 1px;
 `;
 
 const NameMemoryTest: React.FC = () => {
@@ -207,18 +192,37 @@ const NameMemoryTest: React.FC = () => {
   
   const [inputText, setInputText] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isInMemorizePhase, setIsInMemorizePhase] = useState(true);
+  const [memorizeTimeRemaining, setMemorizeTimeRemaining] = useState(30);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(90);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [score, setScore] = useState(0);
 
+  const NAMES_TO_REMEMBER = ['JOHN', 'MARY', 'DAVID', 'SARAH', 'MICHAEL'];
+
+  const calculateScore = (text: string): number => {
+    const userText = text.toUpperCase();
+    let correctCount = 0;
+    for (const name of NAMES_TO_REMEMBER) {
+      if (userText.includes(name)) {
+        correctCount++;
+      }
+    }
+    return correctCount;
+  };
+
+  // Memorization phase timer (30 seconds)
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
-    if (hasStarted && !isPaused && timeRemaining !== null && timeRemaining > 0) {
+    if (isInMemorizePhase && memorizeTimeRemaining > 0) {
       interval = setInterval(() => {
-        setTimeElapsed(prev => prev + 1);
-        setTimeRemaining(prev => {
-          if (prev === null || prev <= 1) {
-            setIsPaused(true);
+        setMemorizeTimeRemaining(prev => {
+          if (prev <= 1) {
+            // Auto-start the test after 30 seconds
+            setIsInMemorizePhase(false);
+            setHasStarted(true);
+            setTimeRemaining(90);
             return 0;
           }
           return prev - 1;
@@ -228,50 +232,67 @@ const NameMemoryTest: React.FC = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [hasStarted, isPaused, timeRemaining]);
+  }, [isInMemorizePhase, memorizeTimeRemaining]);
 
-  // Handle task completion
+  // Main test timer (90 seconds)
   useEffect(() => {
-    if (timeRemaining === 0 && hasStarted) {
-      // Task completed - timer ran out
-      setIsPaused(true);
+    let interval: NodeJS.Timeout | undefined;
+    if (hasStarted && !isSubmitted && timeRemaining !== null && timeRemaining > 0) {
+      interval = setInterval(() => {
+        setTimeElapsed(prev => prev + 1);
+        setTimeRemaining(prev => {
+          if (prev === null || prev <= 1) {
+            // Auto-submit when time runs out
+            const finalScore = calculateScore(inputText);
+            setScore(finalScore);
+            setIsSubmitted(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
-  }, [timeRemaining, hasStarted]);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [hasStarted, isSubmitted, timeRemaining, inputText]);
 
   const handleStartTest = () => {
-    if (!hasStarted) {
-      setHasStarted(true);
-      setTimeRemaining(90);
-      setIsPaused(false);
+    setIsInMemorizePhase(false);
+    setHasStarted(true);
+    setTimeRemaining(90);
+  };
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const handleTextChange = (value: string) => {
+    if (isSubmitted || !hasStarted) return;
+    setInputText(value);
+  };
+
+  const handleSubmit = () => {
+    const finalScore = calculateScore(inputText);
+    setScore(finalScore);
+    setIsSubmitted(true);
+  };
+
+  useEffect(() => {
+    if (hasStarted && !isSubmitted) {
+      textareaRef.current?.focus();
     }
-  };
-
-  const handleKeyPress = (char: string) => {
-    if (isPaused || !hasStarted) return;
-    setInputText(prev => prev + char);
-  };
-
-  const handleSpace = () => {
-    if (isPaused || !hasStarted) return;
-    setInputText(prev => prev + ' ');
-  };
-
-  const handleBackspace = () => {
-    if (isPaused || !hasStarted) return;
-    setInputText(prev => prev.slice(0, -1));
-  };
-
-  const handleEnter = () => {
-    if (isPaused || !hasStarted) return;
-    setInputText(prev => prev + '\n');
-  };
+    if (isSubmitted) {
+      textareaRef.current?.blur();
+    }
+  }, [hasStarted, isSubmitted]);
 
   const clearInput = () => {
     setInputText('');
     setHasStarted(false);
+    setIsInMemorizePhase(true);
+    setMemorizeTimeRemaining(30);
     setTimeElapsed(0);
     setTimeRemaining(90);
-    setIsPaused(false);
+    setIsSubmitted(false);
+    setScore(0);
   };
 
   const formatTime = (seconds: number) => {
@@ -303,105 +324,90 @@ const NameMemoryTest: React.FC = () => {
         title="Name Memory Test"
         step={14}
         totalSteps={21}
-        instructions={instructions}
+        instructions={isInMemorizePhase || hasStarted ? null : instructions}
         onQuit={() => navigate('/tasks')}
-        onPause={() => setIsPaused(prev => !prev)}
+        onPause={() => {}}
       >
-        <StatusCard $status={getStatus()}>
-          {getStatus() === 'completed' ? (
-            <CheckCircle size={20} />
-          ) : getStatus() === 'drawing' ? (
-            <AlertCircle size={20} />
-          ) : (
-            <Clock size={20} />
-          )}
-          <StatusText $status={getStatus()}>
-            {timeRemaining === 0 ? 'Time\'s up!' : 
-             inputText.length > 0 ? 'Writing in progress...' : 
-             hasStarted ? 'Continue writing...' : 'Ready to start'}
-            {isPaused && ' (Paused)'}
-          </StatusText>
-        </StatusCard>
-
-        {hasStarted && (
-          <Timer>
-            <TimerText>
-              ⏱️ {formatTime(timeElapsed)} / Remaining: {timeRemaining !== null ? formatTime(timeRemaining) : '--'}
-            </TimerText>
-          </Timer>
-        )}
-
-        {!hasStarted ? (
-          <Button $variant="primary" onClick={handleStartTest} style={{ width: '100%', justifyContent: 'center' }}>
-            Start Test
-          </Button>
-        ) : (
-          <TextInputWrapper>
-            <TextDisplay>
-              {inputText}
-              {!isPaused && hasStarted && timeRemaining !== 0 && <span style={{ animation: 'blink 1s infinite' }}>|</span>}
-            </TextDisplay>
-
-            <KeyboardContainer>
-              <KeyboardRow>
-                <Key $size="small" onClick={() => handleKeyPress('Q')}>Q</Key>
-                <Key $size="small" onClick={() => handleKeyPress('W')}>W</Key>
-                <Key $size="small" onClick={() => handleKeyPress('E')}>E</Key>
-                <Key $size="small" onClick={() => handleKeyPress('R')}>R</Key>
-                <Key $size="small" onClick={() => handleKeyPress('T')}>T</Key>
-                <Key $size="small" onClick={() => handleKeyPress('Y')}>Y</Key>
-                <Key $size="small" onClick={() => handleKeyPress('U')}>U</Key>
-                <Key $size="small" onClick={() => handleKeyPress('I')}>I</Key>
-                <Key $size="small" onClick={() => handleKeyPress('O')}>O</Key>
-                <Key $size="small" onClick={() => handleKeyPress('P')}>P</Key>
-              </KeyboardRow>
-
-              <KeyboardRow>
-                <Key $size="small" onClick={() => handleKeyPress('A')}>A</Key>
-                <Key $size="small" onClick={() => handleKeyPress('S')}>S</Key>
-                <Key $size="small" onClick={() => handleKeyPress('D')}>D</Key>
-                <Key $size="small" onClick={() => handleKeyPress('F')}>F</Key>
-                <Key $size="small" onClick={() => handleKeyPress('G')}>G</Key>
-                <Key $size="small" onClick={() => handleKeyPress('H')}>H</Key>
-                <Key $size="small" onClick={() => handleKeyPress('J')}>J</Key>
-                <Key $size="small" onClick={() => handleKeyPress('K')}>K</Key>
-                <Key $size="small" onClick={() => handleKeyPress('L')}>L</Key>
-              </KeyboardRow>
-
-              <KeyboardRow>
-                <Key $size="small" onClick={() => handleKeyPress('Z')}>Z</Key>
-                <Key $size="small" onClick={() => handleKeyPress('X')}>X</Key>
-                <Key $size="small" onClick={() => handleKeyPress('C')}>C</Key>
-                <Key $size="small" onClick={() => handleKeyPress('V')}>V</Key>
-                <Key $size="small" onClick={() => handleKeyPress('B')}>B</Key>
-                <Key $size="small" onClick={() => handleKeyPress('N')}>N</Key>
-                <Key $size="small" onClick={() => handleKeyPress('M')}>M</Key>
-              </KeyboardRow>
-
-              <KeyboardRow>
-                <Key $size="large" onClick={handleSpace}>Space</Key>
-                <Key $size="large" onClick={handleEnter}>Enter</Key>
-                <Key $size="large" onClick={handleBackspace}>
-                  <Delete size={14} />
-                </Key>
-              </KeyboardRow>
-            </KeyboardContainer>
-          </TextInputWrapper>
-        )}
-
-        {hasStarted && (
-          <Controls>
-            <Button $variant="danger" onClick={clearInput}>
-              <RotateCcw size={16} />
-              Clear
-            </Button>
-            {timeRemaining !== 0 && (
-              <Button $variant="secondary" onClick={() => setIsPaused(prev => !prev)}>
-                {isPaused ? <Play size={16} /> : <Pause size={16} />}
-                {isPaused ? 'Resume' : 'Pause'}
+        {isInMemorizePhase ? (
+          <>
+            <MemorizePhaseBox>
+              <div style={{ marginBottom: '16px', fontSize: '18px', fontWeight: '600', color: '#667eea' }}>
+                Remember these names:
+              </div>
+              <NamesDisplay>
+                JOHN • MARY • DAVID • SARAH • MICHAEL
+              </NamesDisplay>
+              <MemorizeTimer>
+                {memorizeTimeRemaining}s
+              </MemorizeTimer>
+              <div style={{ marginTop: '16px', fontSize: '14px', color: '#6b7280' }}>
+                {memorizeTimeRemaining > 0 
+                  ? 'Test will start automatically when timer ends' 
+                  : 'Starting test now...'}
+              </div>
+            </MemorizePhaseBox>
+            {memorizeTimeRemaining > 0 && (
+              <Button $variant="primary" onClick={handleStartTest} style={{ width: '100%', justifyContent: 'center' }}>
+                Start Test Now
               </Button>
             )}
-          </Controls>
+          </>
+        ) : (
+          <>
+            <StatusCard $status={getStatus()}>
+              {getStatus() === 'completed' ? (
+                <CheckCircle size={20} />
+              ) : getStatus() === 'drawing' ? (
+                <AlertCircle size={20} />
+              ) : (
+                <Clock size={20} />
+              )}
+              <StatusText $status={getStatus()}>
+                {timeRemaining === 0 ? 'Time\'s up!' : 
+                 inputText.length > 0 ? 'Writing in progress...' : 
+                 hasStarted ? 'Continue writing...' : 'Ready to start'}
+              </StatusText>
+            </StatusCard>
+
+            {hasStarted && !isSubmitted && (
+              <Timer>
+                <TimerText>
+                  ⏱️ {formatTime(timeElapsed)} / Remaining: {timeRemaining !== null ? formatTime(timeRemaining) : '--'}
+                </TimerText>
+              </Timer>
+            )}
+
+            {isSubmitted ? (
+              <ResultsDisplay>
+                <ResultsText>Answered: {score}/5</ResultsText>
+              </ResultsDisplay>
+            ) : (
+              <TextInputWrapper>
+                <TextArea
+                  ref={textareaRef}
+                  value={inputText}
+                  onChange={(e) => handleTextChange(e.target.value)}
+                  placeholder={timeRemaining === 0 ? "Time's up! Test completed." : 'Type here...'}
+                  disabled={isSubmitted || timeRemaining === 0 || !hasStarted}
+                />
+              </TextInputWrapper>
+            )}
+
+            {hasStarted && (
+              <Controls>
+                <Button $variant="danger" onClick={clearInput}>
+                  <RotateCcw size={16} />
+                  Clear
+                </Button>
+                {!isSubmitted && (
+                  <Button $variant="primary" onClick={handleSubmit}>
+                    <Send size={16} />
+                    Submit
+                  </Button>
+                )}
+              </Controls>
+            )}
+          </>
         )}
       </TestHarness>
     </Container>
