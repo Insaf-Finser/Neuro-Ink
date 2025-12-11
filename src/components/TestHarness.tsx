@@ -22,8 +22,26 @@ const Title = styled.h3`
 `;
 
 const Progress = styled.div`
-  font-weight: 600;
-  color: #667eea;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #1f2937;
+`;
+
+const ProgressBar = styled.div`
+  width: 160px;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+`;
+
+const ProgressFill = styled.div<{ $percent: number; $complete?: boolean }>`
+  height: 100%;
+  width: ${({ $percent }) => Math.min(100, Math.max(0, $percent))}%;
+  background: ${({ $complete }) => ($complete ? '#10b981' : '#667eea')};
+  transition: width 0.3s ease, background 0.3s ease;
 `;
 
 const Instructions = styled.div`
@@ -62,8 +80,10 @@ interface TestHarnessProps {
   totalSteps: number;
   instructions: React.ReactNode;
   children: React.ReactNode;
-  onPause?: () => void;
-  onQuit?: () => void;
+  isComplete?: boolean;
+  onRetry?: () => void;
+  onNext?: () => void;
+  canProceed?: boolean;
 }
 
 const TestHarness: React.FC<TestHarnessProps> = ({
@@ -72,22 +92,37 @@ const TestHarness: React.FC<TestHarnessProps> = ({
   totalSteps,
   instructions,
   children,
-  onPause,
-  onQuit
+  isComplete = false,
+  onRetry,
+  onNext,
+  canProceed
 }) => {
+  const percent = isComplete ? 100 : Math.round((step / totalSteps) * 100);
   return (
     <Harness>
       <Header>
         <Title>{title}</Title>
         <Progress>
           Step {step} / {totalSteps}
+          <ProgressBar>
+            <ProgressFill $percent={percent} $complete={isComplete} />
+          </ProgressBar>
         </Progress>
       </Header>
       <Instructions>{instructions}</Instructions>
       {children}
       <Footer>
-        {onQuit && <Button onClick={onQuit}>Quit</Button>}
-        {onPause && <Button $variant="secondary" onClick={onPause}>Pause</Button>}
+        {onRetry && <Button onClick={onRetry}>Retry</Button>}
+        {onNext && (
+          <Button
+            $variant="primary"
+            onClick={onNext}
+            disabled={canProceed === false}
+            style={canProceed === false ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+          >
+            Next
+          </Button>
+        )}
       </Footer>
     </Harness>
   );

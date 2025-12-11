@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { RotateCcw, Play, Pause, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { RotateCcw, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
@@ -137,18 +137,16 @@ const HandwritingTaskTest: React.FC = () => {
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [timeElapsed, setTimeElapsed] = useState(0);
+const [timeElapsed, setTimeElapsed] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(task?.timeLimit || 60);
 
   React.useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
-    if (hasStarted && !isPaused && timeRemaining !== null && timeRemaining > 0) {
+    if (hasStarted && timeRemaining !== null && timeRemaining > 0) {
       interval = setInterval(() => {
         setTimeElapsed(prev => prev + 1);
         setTimeRemaining(prev => {
           if (prev === null || prev <= 1) {
-            setIsPaused(true);
             return 0;
           }
           return prev - 1;
@@ -158,14 +156,13 @@ const HandwritingTaskTest: React.FC = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [hasStarted, isPaused, timeRemaining]);
+  }, [hasStarted, timeRemaining]);
 
   // Handle task completion
   React.useEffect(() => {
     if (timeRemaining === 0 && hasStarted) {
       // Task completed - timer ran out
       setIsDrawing(false);
-      setIsPaused(true);
     }
   }, [timeRemaining, hasStarted]);
 
@@ -173,17 +170,15 @@ const HandwritingTaskTest: React.FC = () => {
     if (!hasStarted) {
       setHasStarted(true);
       setTimeRemaining(task?.timeLimit || 60);
-      setIsPaused(false);
     }
   };
 
   const handleStrokeStart = (point: StylusPoint) => {
-    if (isPaused || !hasStarted) return;
+    if (!hasStarted) return;
     setIsDrawing(true);
   };
 
   const handleStrokeEnd = () => {
-    if (isPaused) return;
     setIsDrawing(false);
   };
 
@@ -215,8 +210,14 @@ const HandwritingTaskTest: React.FC = () => {
           step={0}
           totalSteps={21}
           instructions={<div>Task not found. Please return to task selection.</div>}
-          onQuit={() => navigate('/tasks')}
-        />
+          isComplete
+          onNext={() => navigate('/tasks')}
+          canProceed
+        >
+          <div style={{ textAlign: 'center', padding: '12px', color: '#6b7280' }}>
+            Task not found. Please return to task selection.
+          </div>
+        </TestHarness>
       </Container>
     );
   }
@@ -239,8 +240,10 @@ const HandwritingTaskTest: React.FC = () => {
         step={21}
         totalSteps={21}
         instructions={instructions}
-        onQuit={() => navigate('/tasks')}
-        onPause={() => setIsPaused(prev => !prev)}
+        isComplete={timeRemaining === 0 && hasStarted}
+        onRetry={clearCanvas}
+        onNext={() => navigate('/results')}
+        canProceed={timeRemaining === 0 && hasStarted}
       >
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? (
@@ -254,7 +257,6 @@ const HandwritingTaskTest: React.FC = () => {
             {timeRemaining === 0 ? 'Time\'s up!' : 
              isDrawing ? 'Drawing in progress...' : 
              hasStarted ? 'Continue drawing...' : 'Ready to start'}
-            {isPaused && ' (Paused)'}
           </StatusText>
         </StatusCard>
 
@@ -269,13 +271,12 @@ const HandwritingTaskTest: React.FC = () => {
         <div style={{ position: 'relative' }}>
           <DrawingCanvas
             ref={canvasRef}
-            disabled={isPaused || !hasStarted}
+            disabled={!hasStarted}
             placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Draw here...') : 'Tap canvas to start test'}
             onTap={handleCanvasTap}
             onStrokeStart={handleStrokeStart}
             onStrokeEnd={handleStrokeEnd}
           />
-          {isPaused && hasStarted && timeRemaining !== 0 && <PauseOverlay>⏸️ Task Paused</PauseOverlay>}
           {timeRemaining === 0 && hasStarted && (
             <PauseOverlay style={{ background: 'rgba(16, 185, 129, 0.9)' }}>
               ✓ Test Completed
@@ -287,14 +288,8 @@ const HandwritingTaskTest: React.FC = () => {
           <Controls>
             <Button $variant="danger" onClick={clearCanvas}>
               <RotateCcw size={16} />
-              Clear
+              Retry
             </Button>
-            {timeRemaining !== 0 && (
-              <Button $variant="secondary" onClick={() => setIsPaused(prev => !prev)}>
-                {isPaused ? <Play size={16} /> : <Pause size={16} />}
-                {isPaused ? 'Resume' : 'Pause'}
-              </Button>
-            )}
           </Controls>
         )}
       </TestHarness>

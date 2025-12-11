@@ -59,7 +59,9 @@ const WordRecallTest: React.FC = () => {
         step={21}
         totalSteps={21}
         instructions={instructions}
-        onQuit={() => navigate('/tasks')}
+        isComplete
+        onNext={() => navigate('/tasks')}
+        canProceed
       >
         <StatusCard>
           <AlertCircle size={20} />
@@ -71,4 +73,5 @@ const WordRecallTest: React.FC = () => {
 };
 
 export default WordRecallTest;
+
 

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import styled from 'styled-components';
 import { stylusInputService, StylusPoint } from '../services/stylusInputService';
+import { drawReferenceShape, ReferenceShapeConfig, sizeReferenceCanvas } from '../utils/referenceShapes';
 
 const DrawingArea = styled.div`
   border: 3px dashed #667eea;
@@ -48,6 +49,17 @@ const Canvas = styled.canvas`
   box-sizing: border-box;
 `;
 
+const ReferenceCanvas = styled.canvas`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+`;
+
 const PlaceholderText = styled.div`
   position: absolute;
   top: 50%;
@@ -86,6 +98,7 @@ export interface DrawingCanvasProps {
   onPointAdded?: (point: StylusPoint) => void;
   onStrokeEnd?: (points: StylusPoint[]) => void;
   onTap?: () => void;
+  referenceShape?: ReferenceShapeConfig;
   disabled?: boolean;
   placeholder?: string;
   showStylusIndicator?: boolean;
@@ -100,6 +113,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
       onPointAdded,
       onStrokeEnd,
       onTap,
+      referenceShape,
       disabled = false,
       placeholder = 'Draw here...',
       showStylusIndicator = true,
@@ -110,11 +124,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
   ) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const referenceCanvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
     const lastPointRef = useRef<StylusPoint | null>(null);
     const isDrawingRef = useRef(false);
     const allStrokesRef = useRef<StylusPoint[][]>([]);
     const currentStrokeRef = useRef<StylusPoint[]>([]);
+    const stylusInitializedRef = useRef(false);
 
     // Initialize canvas and context with fixed size
     const initializeCanvas = useCallback(() => {
@@ -190,27 +206,49 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
       getAllStrokes,
     }));
 
-    // Initialize canvas when container is ready
+    // Initialize canvas and stylus once when container is ready
     useEffect(() => {
       const canvas = canvasRef.current;
       const container = containerRef.current;
       if (!canvas || !container) return;
 
-      // Wait for container to have dimensions
       const checkAndInit = () => {
         const rect = container.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
           initializeCanvas();
-          // Initialize stylus input service after canvas is ready
-          stylusInputService.initialize(canvas);
+          if (!stylusInitializedRef.current) {
+            stylusInputService.initialize(canvas);
+            stylusInitializedRef.current = true;
+          }
         } else {
-          // Retry after a short delay if container isn't ready yet
           setTimeout(checkAndInit, 50);
         }
       };
 
       checkAndInit();
     }, [initializeCanvas]);
+
+    // Draw or update reference shape without resetting user strokes
+    useEffect(() => {
+      const refCanvas = referenceCanvasRef.current;
+      const container = containerRef.current;
+      if (!refCanvas || !container) return;
+      const rect = container.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      const refCtx = sizeReferenceCanvas(refCanvas, rect.width, rect.height);
+      if (!refCtx) return;
+
+      if (referenceShape) {
+        drawReferenceShape(refCtx, referenceShape.type, rect.width, rect.height, referenceShape.options);
+      } else {
+        refCtx.clearRect(0, 0, rect.width, rect.height);
+      }
+    }, [
+      referenceShape?.type,
+      referenceShape?.options?.color,
+      referenceShape?.options?.lineWidth,
+      referenceShape?.options?.opacity
+    ]);
 
     // Setup canvas and event listeners
     useEffect(() => {
@@ -308,6 +346,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
 
     return (
       <DrawingArea ref={containerRef}>
+        {referenceShape && <ReferenceCanvas ref={referenceCanvasRef} />}
         <Canvas ref={canvasRef} />
         <PlaceholderText>{placeholder}</PlaceholderText>
         {showStylusIndicator && stylusCapabilities && (

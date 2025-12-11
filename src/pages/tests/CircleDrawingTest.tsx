@@ -5,6 +5,11 @@ import { RotateCcw, Play, Pause, CheckCircle, AlertCircle, Clock } from 'lucide-
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
+import { validateDrawing, DrawingValidationResult } from '../../services/drawingValidationService';
+import { analyzeTest } from '../../services/testAnalysisService';
+import TestResultsDisplay from '../../components/TestResultsDisplay';
+import { AIAnalysisResult } from '../../services/aiAnalysisService';
+import { saveTestResult } from '../../services/resultsStorageService';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -133,18 +138,19 @@ const CircleDrawingTest: React.FC = () => {
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(30);
+  const [validationResult, setValidationResult] = useState<DrawingValidationResult | null>(null);
+  const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
-    if (hasStarted && !isPaused && timeRemaining !== null && timeRemaining > 0) {
+    if (hasStarted && timeRemaining !== null && timeRemaining > 0) {
       interval = setInterval(() => {
         setTimeElapsed(prev => prev + 1);
         setTimeRemaining(prev => {
           if (prev === null || prev <= 1) {
-            setIsPaused(true);
             // Task completed - timer ran out
             return 0;
           }
@@ -155,14 +161,14 @@ const CircleDrawingTest: React.FC = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [hasStarted, isPaused, timeRemaining]);
+  }, [hasStarted, timeRemaining]);
 
   // Handle task completion
   useEffect(() => {
     if (timeRemaining === 0 && hasStarted) {
       // Task completed - timer ran out
       setIsDrawing(false);
-      setIsPaused(true);
+      evaluateDrawing();
     }
   }, [timeRemaining, hasStarted]);
 
@@ -170,18 +176,46 @@ const CircleDrawingTest: React.FC = () => {
     if (!hasStarted) {
       setHasStarted(true);
       setTimeRemaining(30);
-      setIsPaused(false);
     }
   };
 
   const handleStrokeStart = (point: StylusPoint) => {
-    if (isPaused || !hasStarted) return;
+    if (!hasStarted) return;
     setIsDrawing(true);
   };
 
   const handleStrokeEnd = () => {
-    if (isPaused) return;
     setIsDrawing(false);
+  };
+
+  const evaluateDrawing = async () => {
+    const strokes = canvasRef.current?.getAllStrokes() || [];
+    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
+    if (!strokes.length || canvasSize.width === 0 || canvasSize.height === 0) {
+      setValidationResult({ completion: 0, accuracy: 0, notes: ['No strokes detected'] });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const validation = validateDrawing({ type: 'circle' }, strokes, canvasSize);
+      setValidationResult(validation);
+
+      const totalTimeMs = Math.max(1, timeElapsed * 1000);
+      const analysis = analyzeTest('circleDrawing', strokes, canvasSize, totalTimeMs, validation.accuracy);
+      setAiResult(analysis.aiResult);
+
+      // Persist result for current user
+      saveTestResult({
+        testName: 'circleDrawing',
+        durationMs: totalTimeMs,
+        validation,
+        aiResult: analysis.aiResult,
+        features: analysis.features
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const clearCanvas = () => {
@@ -190,6 +224,9 @@ const CircleDrawingTest: React.FC = () => {
     setIsDrawing(false);
     setTimeElapsed(0);
     setTimeRemaining(30);
+    setValidationResult(null);
+    setAiResult(null);
+    setIsAnalyzing(false);
   };
 
   const formatTime = (seconds: number) => {
@@ -222,8 +259,10 @@ const CircleDrawingTest: React.FC = () => {
         step={1}
         totalSteps={21}
         instructions={instructions}
-        onQuit={() => navigate('/tasks')}
-        onPause={() => setIsPaused(prev => !prev)}
+        isComplete={timeRemaining === 0 && hasStarted}
+        onRetry={clearCanvas}
+        onNext={() => navigate('/test/square_drawing')}
+        canProceed={timeRemaining === 0 && hasStarted}
       >
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? (
@@ -237,7 +276,6 @@ const CircleDrawingTest: React.FC = () => {
             {timeRemaining === 0 ? 'Time\'s up!' : 
              isDrawing ? 'Drawing in progress...' : 
              hasStarted ? 'Continue drawing...' : 'Ready to start'}
-            {isPaused && ' (Paused)'}
           </StatusText>
         </StatusCard>
 
@@ -252,13 +290,13 @@ const CircleDrawingTest: React.FC = () => {
         <div style={{ position: 'relative' }}>
           <DrawingCanvas
             ref={canvasRef}
-            disabled={isPaused || !hasStarted}
+            disabled={!hasStarted}
             placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Draw your circle here...') : 'Tap canvas to start test'}
             onTap={handleCanvasTap}
             onStrokeStart={handleStrokeStart}
             onStrokeEnd={handleStrokeEnd}
+            referenceShape={{ type: 'circle' }}
           />
-          {isPaused && hasStarted && timeRemaining !== 0 && <PauseOverlay>⏸️ Task Paused</PauseOverlay>}
           {timeRemaining === 0 && hasStarted && (
             <PauseOverlay style={{ background: 'rgba(16, 185, 129, 0.9)' }}>
               ✓ Test Completed
@@ -270,16 +308,16 @@ const CircleDrawingTest: React.FC = () => {
           <Controls>
             <Button $variant="danger" onClick={clearCanvas}>
               <RotateCcw size={16} />
-              Clear
+              Retry
             </Button>
-            {timeRemaining !== 0 && (
-              <Button $variant="secondary" onClick={() => setIsPaused(prev => !prev)}>
-                {isPaused ? <Play size={16} /> : <Pause size={16} />}
-                {isPaused ? 'Resume' : 'Pause'}
-              </Button>
-            )}
           </Controls>
         )}
+
+        {(validationResult || aiResult) && (
+          <TestResultsDisplay validation={validationResult || undefined} aiResult={aiResult || undefined} />
+        )}
+
+        {isAnalyzing && <div style={{ textAlign: 'center', color: '#6b7280' }}>Analyzing...</div>}
       </TestHarness>
     </Container>
   );
