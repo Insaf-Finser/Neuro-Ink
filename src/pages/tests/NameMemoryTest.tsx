@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { RotateCcw, Play, Pause, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { RotateCcw, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
@@ -133,19 +133,17 @@ const NameMemoryTest: React.FC = () => {
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [timeElapsed, setTimeElapsed] = useState(0);
+const [timeElapsed, setTimeElapsed] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(90);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
-    if (hasStarted && !isPaused && timeRemaining !== null && timeRemaining > 0) {
+    if (hasStarted && timeRemaining !== null && timeRemaining > 0) {
       interval = setInterval(() => {
         setTimeElapsed(prev => prev + 1);
         setTimeRemaining(prev => {
           if (prev === null || prev <= 1) {
-            setIsPaused(true);
-            return 0;
+return 0;
           }
           return prev - 1;
         });
@@ -154,33 +152,30 @@ const NameMemoryTest: React.FC = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [hasStarted, isPaused, timeRemaining]);
+  }, [hasStarted, timeRemaining]);
 
   // Handle task completion
   useEffect(() => {
     if (timeRemaining === 0 && hasStarted) {
       // Task completed - timer ran out
       setIsDrawing(false);
-      setIsPaused(true);
-    }
+}
   }, [timeRemaining, hasStarted]);
 
   const handleCanvasTap = () => {
     if (!hasStarted) {
       setHasStarted(true);
       setTimeRemaining(90);
-      setIsPaused(false);
     }
   };
 
   const handleStrokeStart = (point: StylusPoint) => {
-    if (isPaused || !hasStarted) return;
+    if (!hasStarted) return;
     setIsDrawing(true);
   };
 
   const handleStrokeEnd = () => {
-    if (isPaused) return;
-    setIsDrawing(false);
+        setIsDrawing(false);
   };
 
   const clearCanvas = () => {
@@ -218,11 +213,13 @@ const NameMemoryTest: React.FC = () => {
     <Container>
       <TestHarness
         title="Name Memory Test"
-        step={14}
+        step={ 14 }
         totalSteps={21}
         instructions={instructions}
-        onQuit={() => navigate('/tasks')}
-        onPause={() => setIsPaused(prev => !prev)}
+        isComplete={timeRemaining === 0 && hasStarted}
+        onRetry={clearCanvas}
+        onNext={() => navigate('/test/clock_drawing')}
+        canProceed={timeRemaining === 0 && hasStarted}
       >
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? (
@@ -236,7 +233,6 @@ const NameMemoryTest: React.FC = () => {
             {timeRemaining === 0 ? 'Time\'s up!' : 
              isDrawing ? 'Drawing in progress...' : 
              hasStarted ? 'Continue drawing...' : 'Ready to start'}
-            {isPaused && ' (Paused)'}
           </StatusText>
         </StatusCard>
 
@@ -251,13 +247,12 @@ const NameMemoryTest: React.FC = () => {
         <div style={{ position: 'relative' }}>
           <DrawingCanvas
             ref={canvasRef}
-            disabled={isPaused || !hasStarted}
+            disabled={!hasStarted}
             placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Draw here...') : 'Tap canvas to start test'}
             onTap={handleCanvasTap}
             onStrokeStart={handleStrokeStart}
             onStrokeEnd={handleStrokeEnd}
           />
-          {isPaused && hasStarted && timeRemaining !== 0 && <PauseOverlay>⏸️ Task Paused</PauseOverlay>}
           {timeRemaining === 0 && hasStarted && (
             <PauseOverlay style={{ background: 'rgba(16, 185, 129, 0.9)' }}>
               ✓ Test Completed
@@ -269,14 +264,8 @@ const NameMemoryTest: React.FC = () => {
           <Controls>
             <Button $variant="danger" onClick={clearCanvas}>
               <RotateCcw size={16} />
-              Clear
+              Retry
             </Button>
-            {timeRemaining !== 0 && (
-              <Button $variant="secondary" onClick={() => setIsPaused(prev => !prev)}>
-                {isPaused ? <Play size={16} /> : <Pause size={16} />}
-                {isPaused ? 'Resume' : 'Pause'}
-              </Button>
-            )}
           </Controls>
         )}
       </TestHarness>
