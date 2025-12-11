@@ -1,13 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-<<<<<<< HEAD
 import { RotateCcw, CheckCircle, AlertCircle, Clock, Send } from 'lucide-react';
-=======
-import { RotateCcw, CheckCircle, AlertCircle, Clock } from 'lucide-react';
-import { StylusPoint } from '../../services/stylusInputService';
-import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
->>>>>>> e4f3de5785529566b490ff98bcd8424e1b632a62
 import TestHarness from '../../components/TestHarness';
 
 const Container = styled.div`
@@ -196,13 +190,9 @@ const WordMemoryTest: React.FC = () => {
   
   const [inputText, setInputText] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
-<<<<<<< HEAD
   const [isInMemorizePhase, setIsInMemorizePhase] = useState(true);
   const [memorizeTimeRemaining, setMemorizeTimeRemaining] = useState(30);
   const [timeElapsed, setTimeElapsed] = useState(0);
-=======
-const [timeElapsed, setTimeElapsed] = useState(0);
->>>>>>> e4f3de5785529566b490ff98bcd8424e1b632a62
   const [timeRemaining, setTimeRemaining] = useState<number | null>(90);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
@@ -223,7 +213,6 @@ const [timeElapsed, setTimeElapsed] = useState(0);
   // Memorization phase timer (30 seconds)
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
-<<<<<<< HEAD
     if (isInMemorizePhase && memorizeTimeRemaining > 0) {
       interval = setInterval(() => {
         setMemorizeTimeRemaining(prev => {
@@ -233,14 +222,6 @@ const [timeElapsed, setTimeElapsed] = useState(0);
             setHasStarted(true);
             setTimeRemaining(90);
             return 0;
-=======
-    if (hasStarted && timeRemaining !== null && timeRemaining > 0) {
-      interval = setInterval(() => {
-        setTimeElapsed(prev => prev + 1);
-        setTimeRemaining(prev => {
-          if (prev === null || prev <= 1) {
-return 0;
->>>>>>> e4f3de5785529566b490ff98bcd8424e1b632a62
           }
           return prev - 1;
         });
@@ -249,15 +230,10 @@ return 0;
     return () => {
       if (interval) clearInterval(interval);
     };
-<<<<<<< HEAD
   }, [isInMemorizePhase, memorizeTimeRemaining]);
-=======
-  }, [hasStarted, timeRemaining]);
->>>>>>> e4f3de5785529566b490ff98bcd8424e1b632a62
 
   // Main test timer (90 seconds)
   useEffect(() => {
-<<<<<<< HEAD
     let interval: NodeJS.Timeout | undefined;
     if (hasStarted && !isSubmitted && timeRemaining !== null && timeRemaining > 0) {
       interval = setInterval(() => {
@@ -282,37 +258,9 @@ return 0;
   const handleStartTest = () => {
     setIsInMemorizePhase(false);
     setHasStarted(true);
-=======
-    if (timeRemaining === 0 && hasStarted) {
-      // Task completed - timer ran out
-      setIsDrawing(false);
-}
-  }, [timeRemaining, hasStarted]);
-
-  const handleCanvasTap = () => {
-    if (!hasStarted) {
-      setHasStarted(true);
-      setTimeRemaining(90);
-    }
-  };
-
-  const handleStrokeStart = (point: StylusPoint) => {
-    if (!hasStarted) return;
-    setIsDrawing(true);
-  };
-
-  const handleStrokeEnd = () => {
-        setIsDrawing(false);
-  };
-
-  const clearCanvas = () => {
-    canvasRef.current?.clear();
-    setHasStarted(false);
-    setIsDrawing(false);
-    setTimeElapsed(0);
->>>>>>> e4f3de5785529566b490ff98bcd8424e1b632a62
     setTimeRemaining(90);
   };
+
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const handleTextChange = (value: string) => {
@@ -335,6 +283,17 @@ return 0;
     }
   }, [hasStarted, isSubmitted]);
 
+  const clearInput = () => {
+    setInputText('');
+    setHasStarted(false);
+    setIsInMemorizePhase(true);
+    setMemorizeTimeRemaining(30);
+    setTimeElapsed(0);
+    setTimeRemaining(90);
+    setIsSubmitted(false);
+    setScore(0);
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -345,17 +304,6 @@ return 0;
     if (timeRemaining === 0) return 'completed';
     if (inputText.length > 0) return 'drawing';
     return 'waiting';
-  };
-
-  const clearInput = () => {
-    setInputText('');
-    setHasStarted(false);
-    setIsInMemorizePhase(true);
-    setMemorizeTimeRemaining(30);
-    setTimeElapsed(0);
-    setTimeRemaining(90);
-    setIsSubmitted(false);
-    setScore(0);
   };
 
   const instructions = (
@@ -373,12 +321,9 @@ return 0;
     <Container>
       <TestHarness
         title="Word Memory Test"
-        step={ 11 }
+        step={11}
         totalSteps={21}
-<<<<<<< HEAD
         instructions={isInMemorizePhase || hasStarted ? null : instructions}
-        onQuit={() => navigate('/tasks')}
-        onPause={() => {}}
       >
         {isInMemorizePhase ? (
           <>
@@ -460,60 +405,6 @@ return 0;
               </Controls>
             )}
           </>
-=======
-        instructions={instructions}
-        isComplete={timeRemaining === 0 && hasStarted}
-        onRetry={clearCanvas}
-        onNext={() => navigate('/test/sentence_memory')}
-        canProceed={timeRemaining === 0 && hasStarted}
-      >
-        <StatusCard $status={getStatus()}>
-          {getStatus() === 'completed' ? (
-            <CheckCircle size={20} />
-          ) : getStatus() === 'drawing' ? (
-            <AlertCircle size={20} />
-          ) : (
-            <Clock size={20} />
-          )}
-          <StatusText $status={getStatus()}>
-            {timeRemaining === 0 ? 'Time\'s up!' : 
-             isDrawing ? 'Drawing in progress...' : 
-             hasStarted ? 'Continue drawing...' : 'Ready to start'}
-          </StatusText>
-        </StatusCard>
-
-        {hasStarted && (
-          <Timer>
-            <TimerText>
-              ⏱️ {formatTime(timeElapsed)} / Remaining: {timeRemaining !== null ? formatTime(timeRemaining) : '--'}
-            </TimerText>
-          </Timer>
-        )}
-
-        <div style={{ position: 'relative' }}>
-          <DrawingCanvas
-            ref={canvasRef}
-            disabled={!hasStarted}
-            placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Draw here...') : 'Tap canvas to start test'}
-            onTap={handleCanvasTap}
-            onStrokeStart={handleStrokeStart}
-            onStrokeEnd={handleStrokeEnd}
-          />
-          {timeRemaining === 0 && hasStarted && (
-            <PauseOverlay style={{ background: 'rgba(16, 185, 129, 0.9)' }}>
-              ✓ Test Completed
-            </PauseOverlay>
-          )}
-        </div>
-
-        {hasStarted && (
-          <Controls>
-            <Button $variant="danger" onClick={clearCanvas}>
-              <RotateCcw size={16} />
-              Retry
-            </Button>
-          </Controls>
->>>>>>> e4f3de5785529566b490ff98bcd8424e1b632a62
         )}
       </TestHarness>
     </Container>
