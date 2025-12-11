@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { HANDWRITING_TASKS, TASK_CATEGORIES } from '../data/handwritingTasks';
 import { sessionStorageService } from '../services/sessionStorageService';
+import { getTestResults, getCompletedTaskIds } from '../services/resultsStorageService';
 
 const TaskSelectionContainer = styled.div`
   padding: 40px 0;
@@ -268,17 +269,25 @@ const TaskSelection: React.FC = () => {
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [taskProgress, setTaskProgress] = useState<Record<string, any>>({});
 
-  // Load completed tasks from session storage
+  // Load completed tasks from both session storage and Firebase test results
   useEffect(() => {
     const loadProgress = async () => {
       try {
+        // Load from session storage (for handwriting tasks)
         const sessions = await sessionStorageService.getSessions();
-        const completed = sessions
+        const sessionCompleted = sessions
           .filter(session => session.taskId && session.completed)
           .map(session => session.taskId!);
-        setCompletedTasks(completed);
+        
+        // Load from Firebase test results (for drawing tests)
+        const testResults = await getTestResults();
+        const testCompleted = await getCompletedTaskIds();
+        
+        // Combine both sources
+        const allCompleted = new Set([...sessionCompleted, ...testCompleted]);
+        setCompletedTasks(Array.from(allCompleted));
 
-        // Create progress object
+        // Create progress object from sessions
         const progress: Record<string, any> = {};
         sessions.forEach(session => {
           if (session.taskId) {
@@ -289,6 +298,18 @@ const TaskSelection: React.FC = () => {
             };
           }
         });
+        
+        // Add progress from test results
+        testResults.forEach(result => {
+          if (result.taskId) {
+            progress[result.taskId] = {
+              completed: true,
+              score: result.aiResult?.overallRisk || result.validation?.accuracy || 'unknown',
+              timestamp: new Date(result.completedAt).getTime()
+            };
+          }
+        });
+        
         setTaskProgress(progress);
       } catch (error) {
         console.error('Failed to load task progress:', error);

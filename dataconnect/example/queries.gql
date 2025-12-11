@@ -1,0 +1,29 @@
+mutation CreateUser @auth(level: USER) {
+  user_insert(data: {
+    displayName: "New User",
+    email: "newuser@example.com",
+    userType: "patient",
+    createdAt_expr: "request.time"
+  })
+}
+
+query ListAssessmentsForUser($userId: UUID!) @auth(level: USER) {
+  assessments(where: {userId: {eq: $userId}}) {
+    id
+    assessmentType
+    createdAt
+    status
+  }
+}
+
+mutation UpdateAssessmentNotes($id: UUID!, $notes: String) @auth(level: USER) {
+  assessment_update(key: {id: $id}, data: {notes: $notes})
+}
+
+query ListPatientProfessionalLinks @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  patientProfessionalLinks {
+    patientId
+    professionalId
+    accessGrantedDate
+  }
+}

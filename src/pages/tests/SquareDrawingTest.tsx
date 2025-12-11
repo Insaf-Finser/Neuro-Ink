@@ -204,7 +204,7 @@ const SquareDrawingTest: React.FC = () => {
       const analysis = analyzeTest('squareDrawing', strokes, canvasSize, totalTimeMs, validation.accuracy);
       setAiResult(analysis.aiResult);
 
-      saveTestResult({
+      await saveTestResult({
         testName: 'squareDrawing',
         durationMs: totalTimeMs,
         validation,

@@ -204,7 +204,7 @@ const PentagonDrawingTest: React.FC = () => {
       const analysis = analyzeTest('pentagonDrawing', strokes, canvasSize, totalTimeMs, validation.accuracy);
       setAiResult(analysis.aiResult);
 
-      saveTestResult({
+      await saveTestResult({
         testName: 'pentagonDrawing',
         durationMs: totalTimeMs,
         validation,

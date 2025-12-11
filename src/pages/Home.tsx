@@ -1,8 +1,9 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { Brain, Target, Clock, Users, ArrowRight, Shield, Zap } from 'lucide-react';
+import { consentService } from '../services/consentService';
 
 const HeroSection = styled.section`
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -27,12 +28,12 @@ const HeroSubtitle = styled.p`
   margin-right: auto;
 `;
 
-const CTAButton = styled(Link)`
+const CTAButton = styled.button`
   background: white;
   color: #667eea;
   padding: 18px 36px;
   border-radius: 12px;
-  text-decoration: none;
+  border: none;
   font-size: 18px;
   font-weight: 600;
   display: inline-flex;
@@ -40,10 +41,17 @@ const CTAButton = styled(Link)`
   gap: 12px;
   transition: all 0.3s ease;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
 
   &:hover {
     transform: translateY(-3px);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
   }
 `;
 
@@ -140,6 +148,31 @@ const StatLabel = styled.div`
 `;
 
 const Home: React.FC = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const handleStartAssessment = async () => {
+    setLoading(true);
+    try {
+      // Check if consent is accepted
+      const consentAccepted = await consentService.isConsentAccepted();
+      
+      if (consentAccepted) {
+        // If consent is accepted, go directly to tasks
+        navigate('/tasks');
+      } else {
+        // If consent is not accepted, go to welcome page (which leads to consent form)
+        navigate('/welcome');
+      }
+    } catch (error) {
+      console.error('Error checking consent:', error);
+      // On error, default to welcome page
+      navigate('/welcome');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <HeroSection>
@@ -156,9 +189,9 @@ const Home: React.FC = () => {
               Revolutionary technology that analyzes handwriting biomarkers to detect 
               early signs of cognitive decline, helping save lives through timely intervention.
             </HeroSubtitle>
-            <CTAButton to="/welcome">
-              Start Your Assessment
-              <ArrowRight size={20} />
+            <CTAButton onClick={handleStartAssessment} disabled={loading}>
+              {loading ? 'Loading...' : 'Start Your Assessment'}
+              {!loading && <ArrowRight size={20} />}
             </CTAButton>
           </motion.div>
         </div>

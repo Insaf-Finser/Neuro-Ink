@@ -206,7 +206,7 @@ const CircleDrawingTest: React.FC = () => {
       setAiResult(analysis.aiResult);
 
       // Persist result for current user
-      saveTestResult({
+      await saveTestResult({
         testName: 'circleDrawing',
         durationMs: totalTimeMs,
         validation,

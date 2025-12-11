@@ -204,7 +204,7 @@ const SpiralDrawingTest: React.FC = () => {
       const analysis = analyzeTest('spiralDrawing', strokes, canvasSize, totalTimeMs, validation.accuracy);
       setAiResult(analysis.aiResult);
 
-      saveTestResult({
+      await saveTestResult({
         testName: 'spiralDrawing',
         durationMs: totalTimeMs,
         validation,

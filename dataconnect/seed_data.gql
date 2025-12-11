@@ -1,0 +1,73 @@
+mutation CreateDemoData @transaction @auth(level: PUBLIC, insecureReason: "This operation is used to seed the database with demo data.") {
+  user_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      displayName: "demouser1",
+      email: "demouser1@example.com",
+      userType: "patient",
+      createdAt: "2024-04-25T12:00:00Z"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      displayName: "demouser2",
+      email: "demouser2@example.com",
+      userType: "professional",
+      createdAt: "2024-04-25T12:00:00Z"
+    }
+  ])
+  assessment_insertMany(data: [
+    {
+      id: "650e8400-e29b-41d4-a716-446655440000",
+      userId: "550e8400-e29b-41d4-a716-446655440000",
+      assessmentType: "cognitive",
+      createdAt: "2024-04-25T12:15:00Z",
+      status: "completed"
+    },
+    {
+      id: "650e8400-e29b-41d4-a716-446655440001",
+      userId: "550e8400-e29b-41d4-a716-446655440001",
+      assessmentType: "motor",
+      createdAt: "2024-04-25T12:20:00Z",
+      status: "pending"
+    }
+  ])
+  handwritingSample_insertMany(data: [
+    {
+      id: "750e8400-e29b-41d4-a716-446655440000",
+      assessmentId: "650e8400-e29b-41d4-a716-446655440000",
+      sampleType: "drawing",
+      createdAt: "2024-04-25T12:30:00Z"
+    },
+    {
+      id: "750e8400-e29b-41d4-a716-446655440001",
+      assessmentId: "650e8400-e29b-41d4-a716-446655440001",
+      sampleType: "writing",
+      createdAt: "2024-04-25T12:35:00Z"
+    }
+  ])
+   analysisResult_insertMany(data: [
+    {
+      id: "850e8400-e29b-41d4-a716-446655440000",
+      handwritingSampleId: "750e8400-e29b-41d4-a716-446655440000",
+      createdAt: "2024-04-25T12:40:00Z",
+      diagnosisProbability: 0.75,
+      diagnosisScore: 0.8,
+      suggestedAction: "Review cognitive skills"
+    },
+    {
+      id: "850e8400-e29b-41d4-a716-446655440001",
+      handwritingSampleId: "750e8400-e29b-41d4-a716-446655440001",
+      createdAt: "2024-04-25T12:45:00Z",
+      diagnosisProbability: 0.6,
+      diagnosisScore: 0.5,
+      suggestedAction: "Assess motor skills"
+    }
+  ])
+  patientProfessionalLink_insertMany(data: [
+    {
+      patientId: "550e8400-e29b-41d4-a716-446655440000",
+      professionalId: "550e8400-e29b-41d4-a716-446655440001",
+      createdAt: "2024-04-25T12:50:00Z"
+    }
+  ])
+}

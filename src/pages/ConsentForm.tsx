@@ -15,119 +15,128 @@ import {
 import { consentService } from '../services/consentService';
 
 const ConsentContainer = styled.div`
-  padding: 60px 0;
+  padding: 20px 12px;
   min-height: calc(100vh - 160px);
+  max-width: 100%;
+  margin: 0 auto;
 `;
 
 const ConsentHeader = styled.div`
   text-align: center;
-  margin-bottom: 48px;
+  margin-bottom: 20px;
+  padding: 0 4px;
 `;
 
 const ConsentTitle = styled.h1`
-  font-size: 2.8rem;
-  font-weight: 800;
+  font-size: 1.75rem;
+  font-weight: 700;
   color: #333;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
+  line-height: 1.3;
 `;
 
 const ConsentSubtitle = styled.p`
-  font-size: 1.2rem;
+  font-size: 0.95rem;
   color: #666;
-  max-width: 700px;
+  max-width: 100%;
   margin: 0 auto;
-  line-height: 1.6;
+  line-height: 1.5;
 `;
 
 const ConsentForm = styled.div`
   background: white;
-  border-radius: 20px;
-  padding: 60px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-  max-width: 900px;
-  margin: 0 auto;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+  margin-bottom: 16px;
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 600;
   color: #333;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 `;
 
 const SectionContent = styled.div`
-  margin-bottom: 40px;
+  margin-bottom: 20px;
 `;
 
 const Paragraph = styled.p`
   color: #555;
-  line-height: 1.7;
-  margin-bottom: 16px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
 `;
 
 const List = styled.ul`
   color: #555;
-  line-height: 1.7;
-  margin-left: 20px;
-  margin-bottom: 16px;
+  line-height: 1.5;
+  margin-left: 16px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
 `;
 
 const ListItem = styled.li`
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 `;
 
 const HighlightBox = styled.div`
   background: #f8f9ff;
-  border: 2px solid #e8ecff;
+  border: 1px solid #e8ecff;
   border-radius: 12px;
-  padding: 24px;
-  margin: 24px 0;
+  padding: 16px;
+  margin: 16px 0;
 `;
 
 const HighlightText = styled.p`
   color: #333;
   font-weight: 600;
-  line-height: 1.6;
+  line-height: 1.5;
+  font-size: 0.9rem;
 `;
 
 const CheckboxContainer = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: 16px;
-  margin: 32px 0;
-  padding: 24px;
+  gap: 12px;
+  margin: 20px 0;
+  padding: 16px;
   background: #f8f9ff;
   border-radius: 12px;
-  border: 2px solid #e8ecff;
+  border: 1px solid #e8ecff;
 `;
 
 const Checkbox = styled.input`
-  width: 24px;
-  height: 24px;
-  margin-top: 4px;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
   cursor: pointer;
+  flex-shrink: 0;
 `;
 
 const CheckboxLabel = styled.label`
   color: #333;
   font-weight: 600;
-  line-height: 1.6;
+  line-height: 1.5;
   cursor: pointer;
   flex: 1;
+  font-size: 0.9rem;
 `;
 
 const ButtonContainer = styled.div`
   display: flex;
-  gap: 20px;
-  justify-content: center;
-  margin-top: 48px;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
 `;
 
 const ConsentButton = styled.button<{ $primary?: boolean; $disabled?: boolean }>`
-  padding: 16px 32px;
+  padding: 14px 20px;
   border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
@@ -135,23 +144,25 @@ const ConsentButton = styled.button<{ $primary?: boolean; $disabled?: boolean }>
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   
   ${props => props.$primary ? `
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     
-    &:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    &:active:not(:disabled) {
+      transform: scale(0.98);
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
     }
   ` : `
     background: #f8f9fa;
     color: #6c757d;
-    border: 2px solid #e9ecef;
+    border: 1px solid #e9ecef;
     
-    &:hover:not(:disabled) {
+    &:active:not(:disabled) {
       background: #e9ecef;
       color: #495057;
     }
@@ -166,33 +177,34 @@ const ConsentButton = styled.button<{ $primary?: boolean; $disabled?: boolean }>
 `;
 
 const Button = styled(Link)<{ $primary?: boolean; $disabled?: boolean }>`
-  padding: 16px 32px;
+  padding: 14px 20px;
   border-radius: 12px;
   text-decoration: none;
   font-size: 16px;
   font-weight: 600;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 12px;
-  transition: all 0.3s ease;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s ease;
   cursor: ${props => props.$disabled ? 'not-allowed' : 'pointer'};
   opacity: ${props => props.$disabled ? 0.6 : 1};
 
   ${props => props.$primary ? `
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+    &:active {
+      transform: scale(0.98);
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
     }
   ` : `
     background: white;
     color: #667eea;
-    border: 2px solid #667eea;
+    border: 1px solid #667eea;
 
-    &:hover {
+    &:active {
       background: #667eea;
       color: white;
     }
@@ -200,12 +212,35 @@ const Button = styled(Link)<{ $primary?: boolean; $disabled?: boolean }>`
 `;
 
 const ConsentFormPage: React.FC = () => {
-  const [consentGiven, setConsentGiven] = useState(consentService.isConsentAccepted());
+  const [consentGiven, setConsentGiven] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   
   // Get the original destination from the state
   const from = location.state?.from?.pathname || '/tasks';
+  
+  // Load consent status on mount (for display purposes only)
+  // IMPORTANT: Always start with checkbox unchecked - user must explicitly check it
+  React.useEffect(() => {
+    const loadConsent = async () => {
+      try {
+        // Check if consent is already accepted (for informational purposes)
+        const accepted = await consentService.isConsentAccepted();
+        // Don't pre-check the checkbox - user must explicitly check it
+        // This ensures consent is always given intentionally
+        setConsentGiven(false);
+      } catch (error) {
+        console.error('Error loading consent:', error);
+        // Always start unchecked
+        setConsentGiven(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadConsent();
+  }, []);
   
   // Debug logging
   console.log('ConsentForm - location.state:', location.state);
@@ -213,8 +248,7 @@ const ConsentFormPage: React.FC = () => {
 
   return (
     <ConsentContainer>
-      <div className="container">
-        <ConsentHeader>
+      <ConsentHeader>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -235,7 +269,7 @@ const ConsentFormPage: React.FC = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             <SectionTitle>
-              <Shield size={24} />
+              <Shield size={18} />
               Purpose of the Assessment
             </SectionTitle>
             <SectionContent>
@@ -253,7 +287,7 @@ const ConsentFormPage: React.FC = () => {
             </SectionContent>
 
             <SectionTitle>
-              <FileText size={24} />
+              <FileText size={18} />
               What the Assessment Involves
             </SectionTitle>
             <SectionContent>
@@ -271,7 +305,7 @@ const ConsentFormPage: React.FC = () => {
             </SectionContent>
 
             <SectionTitle>
-              <Lock size={24} />
+              <Lock size={18} />
               Data Collection and Privacy
             </SectionTitle>
             <SectionContent>
@@ -295,7 +329,7 @@ const ConsentFormPage: React.FC = () => {
             </SectionContent>
 
             <SectionTitle>
-              <Users size={24} />
+              <Users size={18} />
               Your Rights and Responsibilities
             </SectionTitle>
             <SectionContent>
@@ -317,7 +351,7 @@ const ConsentFormPage: React.FC = () => {
             </SectionContent>
 
             <SectionTitle>
-              <AlertCircle size={24} />
+              <AlertCircle size={18} />
               Important Limitations
             </SectionTitle>
             <SectionContent>
@@ -358,24 +392,32 @@ const ConsentFormPage: React.FC = () => {
               </Button>
               <ConsentButton 
                 $primary={true}
-                $disabled={!consentGiven}
-                onClick={() => {
+                $disabled={!consentGiven || saving || loading}
+                onClick={async () => {
                   console.log('Consent button clicked - consentGiven:', consentGiven);
                   console.log('Consent button clicked - from:', from);
-                  if (consentGiven) {
-                    consentService.setConsentAccepted(true);
-                    console.log('Navigating to:', from);
-                    navigate(from);
+                  if (consentGiven && !saving) {
+                    setSaving(true);
+                    try {
+                      await consentService.setConsentAccepted(true);
+                      console.log('Navigating to:', from);
+                      navigate(from);
+                    } catch (error) {
+                      console.error('Error saving consent:', error);
+                      // Still navigate on error (consent saved to localStorage)
+                      navigate(from);
+                    } finally {
+                      setSaving(false);
+                    }
                   }
                 }}
               >
-                I Consent - Begin Assessment
+                {saving ? 'Saving...' : 'I Consent - Begin Assessment'}
                 <ArrowRight size={20} />
               </ConsentButton>
             </ButtonContainer>
           </motion.div>
         </ConsentForm>
-      </div>
     </ConsentContainer>
   );
 };

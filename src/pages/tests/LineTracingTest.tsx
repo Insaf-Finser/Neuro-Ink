@@ -204,7 +204,7 @@ evaluateDrawing();
       const analysis = analyzeTest('lineTracing', strokes, canvasSize, totalTimeMs, validation.accuracy);
       setAiResult(analysis.aiResult);
 
-      saveTestResult({
+      await saveTestResult({
         testName: 'lineTracing',
         durationMs: totalTimeMs,
         validation,

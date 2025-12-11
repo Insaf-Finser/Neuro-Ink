@@ -15,217 +15,228 @@ import {
 } from 'lucide-react';
 
 const WelcomeContainer = styled.div`
-  padding: 60px 0;
+  padding: 20px 12px;
   min-height: calc(100vh - 160px);
+  max-width: 100%;
+  margin: 0 auto;
 `;
 
 const WelcomeHeader = styled.div`
   text-align: center;
-  margin-bottom: 64px;
+  margin-bottom: 24px;
+  padding: 0 4px;
 `;
 
 const WelcomeTitle = styled.h1`
-  font-size: 3rem;
-  font-weight: 800;
+  font-size: 1.75rem;
+  font-weight: 700;
   color: #333;
-  margin-bottom: 24px;
-  line-height: 1.2;
+  margin-bottom: 12px;
+  line-height: 1.3;
 `;
 
 const WelcomeSubtitle = styled.p`
-  font-size: 1.3rem;
+  font-size: 0.95rem;
   color: #666;
-  max-width: 800px;
+  max-width: 100%;
   margin: 0 auto;
-  line-height: 1.6;
+  line-height: 1.5;
 `;
 
 const ProcessSection = styled.section`
   background: white;
-  border-radius: 20px;
-  padding: 60px;
-  margin-bottom: 48px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
 `;
 
 const SectionTitle = styled.h2`
   text-align: center;
-  font-size: 2.2rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 600;
   color: #333;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 `;
 
 const SectionSubtitle = styled.p`
   text-align: center;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   color: #666;
-  margin-bottom: 48px;
+  margin-bottom: 20px;
+  line-height: 1.5;
 `;
 
 const ProcessSteps = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 32px;
-  margin-bottom: 48px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
 `;
 
 const ProcessStep = styled(motion.div)`
   text-align: center;
-  padding: 32px 24px;
-  border-radius: 16px;
+  padding: 16px 12px;
+  border-radius: 12px;
   background: #f8f9ff;
-  border: 2px solid #e8ecff;
-  transition: all 0.3s ease;
+  border: 1px solid #e8ecff;
+  transition: all 0.2s ease;
 
-  &:hover {
+  &:active {
+    transform: scale(0.98);
     border-color: #667eea;
-    transform: translateY(-4px);
   }
 `;
 
 const StepNumber = styled.div`
-  width: 60px;
-  height: 60px;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 20px;
+  margin: 0 auto 12px;
   color: white;
-  font-size: 1.5rem;
+  font-size: 1rem;
   font-weight: bold;
 `;
 
 const StepIcon = styled.div`
-  width: 80px;
-  height: 80px;
+  width: 48px;
+  height: 48px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 24px;
+  margin: 0 auto 12px;
   color: white;
 `;
 
 const StepTitle = styled.h3`
-  font-size: 1.3rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   color: #333;
 `;
 
 const StepDescription = styled.p`
   color: #666;
-  line-height: 1.6;
+  line-height: 1.4;
+  font-size: 0.8rem;
 `;
 
 const FeaturesGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 32px;
-  margin-bottom: 48px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
 `;
 
 const FeatureCard = styled(motion.div)`
   background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
 `;
 
 const FeatureIcon = styled.div`
-  width: 60px;
-  height: 60px;
+  width: 40px;
+  height: 40px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   color: white;
 `;
 
 const FeatureTitle = styled.h3`
-  font-size: 1.3rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   color: #333;
 `;
 
 const FeatureDescription = styled.p`
   color: #666;
-  line-height: 1.6;
+  line-height: 1.4;
+  font-size: 0.8rem;
 `;
 
 const CTAButton = styled(Link)`
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 20px 40px;
+  padding: 16px 24px;
   border-radius: 12px;
   text-decoration: none;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  transition: all 0.3s ease;
-  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
-  margin: 0 auto;
   display: flex;
+  align-items: center;
   justify-content: center;
-  max-width: 300px;
+  gap: 10px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  margin: 0 auto;
+  max-width: 100%;
 
-  &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+  &:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
   }
 `;
 
 const ImportantInfo = styled.div`
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   color: white;
-  border-radius: 16px;
-  padding: 40px;
+  border-radius: 12px;
+  padding: 20px;
   text-align: center;
-  margin-bottom: 48px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 `;
 
 const ImportantTitle = styled.h3`
-  font-size: 1.8rem;
-  font-weight: 700;
-  margin-bottom: 16px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
 `;
 
 const ImportantText = styled.p`
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   opacity: 0.9;
-  line-height: 1.6;
+  line-height: 1.5;
 `;
 
 const Welcome: React.FC = () => {
   return (
     <WelcomeContainer>
-      <div className="container">
-        <WelcomeHeader>
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <WelcomeTitle>Welcome to Your Cognitive Assessment</WelcomeTitle>
-            <WelcomeSubtitle>
-              You're about to take part in a groundbreaking assessment that uses advanced AI technology 
-              to analyze handwriting patterns and detect early signs of cognitive changes. This process 
-              is designed to be simple, non-invasive, and highly accurate.
-            </WelcomeSubtitle>
-          </motion.div>
-        </WelcomeHeader>
+      <WelcomeHeader>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <WelcomeTitle>Welcome to Your Cognitive Assessment</WelcomeTitle>
+          <WelcomeSubtitle>
+            You're about to take part in a groundbreaking assessment that uses advanced AI technology 
+            to analyze handwriting patterns and detect early signs of cognitive changes. This process 
+            is designed to be simple, non-invasive, and highly accurate.
+          </WelcomeSubtitle>
+        </motion.div>
+      </WelcomeHeader>
 
-        <ProcessSection>
+      <ProcessSection>
           <SectionTitle>How It Works</SectionTitle>
           <SectionSubtitle>
             Our assessment consists of four carefully designed tests that evaluate different aspects of cognitive function
@@ -283,17 +294,17 @@ const Welcome: React.FC = () => {
                 measures attention, working memory, and recognition abilities.
               </StepDescription>
             </ProcessStep>
-          </ProcessSteps>
-        </ProcessSection>
+        </ProcessSteps>
+      </ProcessSection>
 
-        <FeaturesGrid>
+      <FeaturesGrid>
           <FeatureCard
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
             <FeatureIcon>
-              <Brain size={28} />
+              <Brain size={20} />
             </FeatureIcon>
             <FeatureTitle>AI-Powered Analysis</FeatureTitle>
             <FeatureDescription>
@@ -308,7 +319,7 @@ const Welcome: React.FC = () => {
             transition={{ duration: 0.6, delay: 0.1 }}
           >
             <FeatureIcon>
-              <Shield size={28} />
+              <Shield size={20} />
             </FeatureIcon>
             <FeatureTitle>Privacy & Security</FeatureTitle>
             <FeatureDescription>
@@ -323,7 +334,7 @@ const Welcome: React.FC = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             <FeatureIcon>
-              <Zap size={28} />
+              <Zap size={20} />
             </FeatureIcon>
             <FeatureTitle>Quick & Easy</FeatureTitle>
             <FeatureDescription>
@@ -331,29 +342,28 @@ const Welcome: React.FC = () => {
               - just a device with stylus or touch input capabilities.
             </FeatureDescription>
           </FeatureCard>
-        </FeaturesGrid>
+      </FeaturesGrid>
 
-        <ImportantInfo>
-          <ImportantTitle>Important Information</ImportantTitle>
-          <ImportantText>
-            This assessment is designed for screening purposes only and should not replace 
-            professional medical diagnosis. If you have concerns about your cognitive health, 
-            please consult with a healthcare professional. Results should be shared with your 
-            doctor for proper interpretation and follow-up care.
-          </ImportantText>
-        </ImportantInfo>
+      <ImportantInfo>
+        <ImportantTitle>Important Information</ImportantTitle>
+        <ImportantText>
+          This assessment is designed for screening purposes only and should not replace 
+          professional medical diagnosis. If you have concerns about your cognitive health, 
+          please consult with a healthcare professional. Results should be shared with your 
+          doctor for proper interpretation and follow-up care.
+        </ImportantText>
+      </ImportantInfo>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-        >
-          <CTAButton to="/consent">
-            I Understand - Continue to Consent
-            <ArrowRight size={20} />
-          </CTAButton>
-        </motion.div>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.4 }}
+      >
+        <CTAButton to="/consent">
+          I Understand - Continue to Consent
+          <ArrowRight size={20} />
+        </CTAButton>
+      </motion.div>
     </WelcomeContainer>
   );
 };

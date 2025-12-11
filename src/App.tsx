@@ -5,6 +5,9 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import Welcome from './pages/Welcome';
 import ConsentForm from './pages/ConsentForm';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import ProtectedRoute from './components/ProtectedRoute';
 import ClockDrawingTest from './pages/tests/ClockDrawingTest';
 import WordRecallTest from './pages/tests/WordRecallTest';
 import ImageAssociationTest from './pages/tests/ImageAssociationTest';
@@ -44,42 +47,46 @@ function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/consent" element={<ConsentForm />} />
-        <Route path="/tasks" element={<RequireConsent><TaskSelection /></RequireConsent>} />
-        <Route path="/test/clock-drawing" element={<RequireConsent><ClockDrawingTest /></RequireConsent>} />
-        <Route path="/test/word-recall" element={<RequireConsent><WordRecallTest /></RequireConsent>} />
-        <Route path="/test/image-association" element={<RequireConsent><ImageAssociationTest /></RequireConsent>} />
-        <Route path="/test/selection-memory" element={<RequireConsent><SelectionMemoryTest /></RequireConsent>} />
+        <Route path="/dashboard" element={<ProtectedRoute><RequireConsent><Dashboard /></RequireConsent></ProtectedRoute>} />
+        <Route path="/tasks" element={<ProtectedRoute><RequireConsent><TaskSelection /></RequireConsent></ProtectedRoute>} />
+        <Route path="/test/clock-drawing" element={<ProtectedRoute><ClockDrawingTest /></ProtectedRoute>} />
+        <Route path="/test/word-recall" element={<ProtectedRoute><WordRecallTest /></ProtectedRoute>} />
+        <Route path="/test/image-association" element={<ProtectedRoute><ImageAssociationTest /></ProtectedRoute>} />
+        <Route path="/test/selection-memory" element={<ProtectedRoute><SelectionMemoryTest /></ProtectedRoute>} />
         {/* Individual task routes */}
-        <Route path="/test/circle_drawing" element={<RequireConsent><CircleDrawingTest /></RequireConsent>} />
-        <Route path="/test/square_drawing" element={<RequireConsent><SquareDrawingTest /></RequireConsent>} />
-        <Route path="/test/triangle_drawing" element={<RequireConsent><TriangleDrawingTest /></RequireConsent>} />
-        <Route path="/test/pentagon_drawing" element={<RequireConsent><PentagonDrawingTest /></RequireConsent>} />
-        <Route path="/test/spiral_drawing" element={<RequireConsent><SpiralDrawingTest /></RequireConsent>} />
-        <Route path="/test/letter_copy" element={<RequireConsent><LetterCopyTest /></RequireConsent>} />
-        <Route path="/test/word_memory" element={<RequireConsent><WordMemoryTest /></RequireConsent>} />
-        <Route path="/test/repetitive_writing" element={<RequireConsent><RepetitiveWritingTest /></RequireConsent>} />
-        <Route path="/test/dot_connection" element={<RequireConsent><DotConnectionTest /></RequireConsent>} />
-        <Route path="/test/word_copy" element={<RequireConsent><WordCopyTest /></RequireConsent>} />
-        <Route path="/test/number_copy" element={<RequireConsent><NumberCopyTest /></RequireConsent>} />
-        <Route path="/test/sentence_memory" element={<RequireConsent><SentenceMemoryTest /></RequireConsent>} />
-        <Route path="/test/signature_practice" element={<RequireConsent><SignaturePracticeTest /></RequireConsent>} />
-        <Route path="/test/complex_figure_copy" element={<RequireConsent><ComplexFigureCopyTest /></RequireConsent>} />
-        <Route path="/test/line_tracing" element={<RequireConsent><LineTracingTest /></RequireConsent>} />
-        <Route path="/test/name_memory" element={<RequireConsent><NameMemoryTest /></RequireConsent>} />
-        <Route path="/test/number_memory" element={<RequireConsent><NumberMemoryTest /></RequireConsent>} />
-        <Route path="/test/rapid_writing" element={<RequireConsent><RapidWritingTest /></RequireConsent>} />
-        <Route path="/test/comprehensive_assessment" element={<RequireConsent><ComprehensiveAssessmentTest /></RequireConsent>} />
+        <Route path="/test/circle_drawing" element={<ProtectedRoute><CircleDrawingTest /></ProtectedRoute>} />
+        <Route path="/test/square_drawing" element={<ProtectedRoute><SquareDrawingTest /></ProtectedRoute>} />
+        <Route path="/test/triangle_drawing" element={<ProtectedRoute><TriangleDrawingTest /></ProtectedRoute>} />
+        <Route path="/test/pentagon_drawing" element={<ProtectedRoute><PentagonDrawingTest /></ProtectedRoute>} />
+        <Route path="/test/spiral_drawing" element={<ProtectedRoute><SpiralDrawingTest /></ProtectedRoute>} />
+        <Route path="/test/letter_copy" element={<ProtectedRoute><LetterCopyTest /></ProtectedRoute>} />
+        <Route path="/test/word_memory" element={<ProtectedRoute><WordMemoryTest /></ProtectedRoute>} />
+        <Route path="/test/repetitive_writing" element={<ProtectedRoute><RepetitiveWritingTest /></ProtectedRoute>} />
+        <Route path="/test/dot_connection" element={<ProtectedRoute><DotConnectionTest /></ProtectedRoute>} />
+        <Route path="/test/word_copy" element={<ProtectedRoute><WordCopyTest /></ProtectedRoute>} />
+        <Route path="/test/number_copy" element={<ProtectedRoute><NumberCopyTest /></ProtectedRoute>} />
+        <Route path="/test/sentence_memory" element={<ProtectedRoute><SentenceMemoryTest /></ProtectedRoute>} />
+        <Route path="/test/signature_practice" element={<ProtectedRoute><SignaturePracticeTest /></ProtectedRoute>} />
+        <Route path="/test/complex_figure_copy" element={<ProtectedRoute><ComplexFigureCopyTest /></ProtectedRoute>} />
+        <Route path="/test/line_tracing" element={<ProtectedRoute><LineTracingTest /></ProtectedRoute>} />
+        <Route path="/test/name_memory" element={<ProtectedRoute><NameMemoryTest /></ProtectedRoute>} />
+        <Route path="/test/number_memory" element={<ProtectedRoute><NumberMemoryTest /></ProtectedRoute>} />
+        <Route path="/test/rapid_writing" element={<ProtectedRoute><RapidWritingTest /></ProtectedRoute>} />
+        <Route path="/test/comprehensive_assessment" element={<ProtectedRoute><ComprehensiveAssessmentTest /></ProtectedRoute>} />
         
-        {/* Generic route for remaining tasks - all tasks are now explicitly routed above */}
-                  <Route path="/results" element={<Results />} />
-                  <Route path="/ai-analysis" element={<AIAnalysisResults />} />
-                  <Route path="/comprehensive-results" element={<ComprehensiveResults />} />
-                  <Route path="/model-demo" element={<ModelDemo />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/contact" element={<Contact />} />
+        {/* Catch-all route for any test accessed via /test/:taskId */}
+        <Route path="/test/:taskId" element={<ProtectedRoute><HandwritingTaskTest /></ProtectedRoute>} />
+        
+        <Route path="/results" element={<ProtectedRoute><RequireConsent><Results /></RequireConsent></ProtectedRoute>} />
+        <Route path="/ai-analysis" element={<ProtectedRoute><RequireConsent><AIAnalysisResults /></RequireConsent></ProtectedRoute>} />
+        <Route path="/comprehensive-results" element={<ProtectedRoute><RequireConsent><ComprehensiveResults /></RequireConsent></ProtectedRoute>} />
+        <Route path="/model-demo" element={<ModelDemo />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
       </Routes>
     </Layout>
   );

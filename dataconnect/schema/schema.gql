@@ -1,0 +1,41 @@
+type User @table {
+  displayName: String!
+  email: String!
+  createdAt: Timestamp!
+  userType: String!
+  photoUrl: String
+  dateOfBirth: Date
+  gender: String
+}
+
+type Assessment @table {
+  user: User
+  createdAt: Timestamp!
+  assessmentType: String!
+  status: String!
+  notes: String
+}
+
+type HandwritingSample @table {
+  assessment: Assessment
+  sampleType: String!
+  createdAt: Timestamp!
+  imageUrl: String
+  drawnData: String
+}
+
+type AnalysisResult @table {
+  handwritingSample: HandwritingSample
+  createdAt: Timestamp!
+  diagnosisScore: Float!
+  diagnosisProbability: Float!
+  detailedMetrics: String
+  suggestedAction: String
+}
+
+type PatientProfessionalLink @table(key: ["patient", "professional"]) {
+  patient: User!
+  professional: User!
+  createdAt: Timestamp!
+  accessGrantedDate: Timestamp
+}

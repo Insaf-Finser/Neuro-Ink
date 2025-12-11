@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from './context/AuthContext';
+import { AppFlowProvider } from './context/AppFlowContext';
 import App from './App';
 import './index.css';
 
@@ -36,8 +38,12 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
-      <Toaster position="top-right" />
+      <AuthProvider>
+        <AppFlowProvider>
+          <App />
+          <Toaster position="top-right" />
+        </AppFlowProvider>
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

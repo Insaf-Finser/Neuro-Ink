@@ -6,6 +6,9 @@ import styled from 'styled-components';
 import { CheckCircle, Clock, AlertCircle, TrendingUp, BarChart3 } from 'lucide-react';
 import { useTaskCompletion } from '../hooks/useTaskCompletion';
 import { HANDWRITING_TASKS } from '../data/handwritingTasks';
+import { getTestResults, getCompletedTaskIds } from '../services/resultsStorageService';
+import { sessionStorageService } from '../services/sessionStorageService';
+import { useAuth } from '../context/AuthContext';
 
 const ProgressContainer = styled.div`
   background: white;
@@ -157,7 +160,7 @@ const CategoryDot = styled.div<{ $color: string }>`
 `;
 
 const TaskProgressTracker: React.FC = () => {
-  const { getCompletionStats, getTaskProgress } = useTaskCompletion();
+  const { user } = useAuth();
   const [completionStats, setCompletionStats] = useState<any>(null);
   const [taskProgresses, setTaskProgresses] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
@@ -172,27 +175,101 @@ const TaskProgressTracker: React.FC = () => {
   };
 
   useEffect(() => {
+    let isMounted = true;
+    let initialLoad = true;
+    
     const loadProgress = async () => {
       try {
-        const stats = await getCompletionStats();
-        setCompletionStats(stats);
-
-        // Load individual task progress
-        const progresses: Record<string, any> = {};
-        for (const task of HANDWRITING_TASKS) {
-          const progress = await getTaskProgress(task.id);
-          progresses[task.id] = progress;
+        // Only show loading on initial load
+        if (initialLoad) {
+          setLoading(true);
         }
+        
+        // Load from Firebase test results
+        const firebaseResults = await getTestResults();
+        
+        // Get completed task IDs from Firebase
+        const firebaseCompleted = await getCompletedTaskIds();
+        
+        // Load from sessionStorage
+        const sessions = await sessionStorageService.getSessions();
+        const sessionCompleted = sessions
+          .filter(session => session.taskId && session.completed)
+          .map(session => session.taskId!);
+        
+        // Combine both sources
+        const allCompleted = new Set([...firebaseCompleted, ...sessionCompleted]);
+        
+        // Calculate stats
+        const totalTasks = HANDWRITING_TASKS.length;
+        const completedCount = allCompleted.size;
+        const completionRate = totalTasks > 0 ? (completedCount / totalTasks) * 100 : 0;
+        
+        // Calculate average score from test results
+        // Normalize all scores to 0-1 range before averaging
+        const scores = firebaseResults
+          .map(result => {
+            // validation.accuracy is in 0-100 range, convert to 0-1
+            if (result.validation?.accuracy != null) {
+              return result.validation.accuracy / 100;
+            }
+            // aiResult.probability is in 0-100 range, convert to 0-1
+            if (result.aiResult?.probability != null) {
+              return result.aiResult.probability / 100;
+            }
+            return null;
+          })
+          .filter((score): score is number => score !== null && score > 0);
+        const averageScore = scores.length > 0 
+          ? scores.reduce((sum, score) => sum + score, 0) / scores.length
+          : 0;
+        
+        if (!isMounted) return;
+        
+        setCompletionStats({
+          totalTasks,
+          completedTasks: completedCount,
+          completionRate,
+          averageScore
+        });
+        
+        // Create progress object for each task
+        const progresses: Record<string, any> = {};
+        HANDWRITING_TASKS.forEach(task => {
+          const isCompleted = allCompleted.has(task.id);
+          const result = firebaseResults.find(r => r.taskId === task.id);
+          
+          progresses[task.id] = {
+            isCompleted,
+            score: result?.validation?.accuracy ?? 
+              (result?.aiResult && result.aiResult.probability != null ? result.aiResult.probability / 100 : undefined)
+          };
+        });
+        
         setTaskProgresses(progresses);
+        
+        if (initialLoad) {
+          initialLoad = false;
+          setLoading(false);
+        }
       } catch (error) {
         console.error('Failed to load task progress:', error);
-      } finally {
-        setLoading(false);
+        if (initialLoad && isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadProgress();
-  }, [getCompletionStats, getTaskProgress]);
+    
+    // Reload every 5 seconds (less frequent to reduce glitching)
+    const interval = setInterval(loadProgress, 5000);
+    
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [user]);
 
   if (loading) {
     return (
@@ -226,7 +303,7 @@ const TaskProgressTracker: React.FC = () => {
         </StatCard>
         {completionStats?.averageScore > 0 && (
           <StatCard>
-            <StatNumber>{Math.round(completionStats.averageScore * 100)}%</StatNumber>
+            <StatNumber>{(completionStats.averageScore * 100).toFixed(2)}%</StatNumber>
             <StatLabel>Average Score</StatLabel>
           </StatCard>
         )}
@@ -253,7 +330,7 @@ const TaskProgressTracker: React.FC = () => {
               </TaskInfo>
               {isCompleted && score !== undefined && (
                 <TaskScore $score={score}>
-                  {Math.round(score * 100)}%
+                  {(score * 100).toFixed(2)}%
                 </TaskScore>
               )}
             </TaskItem>

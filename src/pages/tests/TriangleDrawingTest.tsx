@@ -204,7 +204,7 @@ const TriangleDrawingTest: React.FC = () => {
       const analysis = analyzeTest('triangleDrawing', strokes, canvasSize, totalTimeMs, validation.accuracy);
       setAiResult(analysis.aiResult);
 
-      saveTestResult({
+      await saveTestResult({
         testName: 'triangleDrawing',
         durationMs: totalTimeMs,
         validation,
