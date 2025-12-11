@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { RotateCcw, CheckCircle, AlertCircle, Clock, Send } from 'lucide-react';
+
+import { RotateCcw, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { StylusPoint } from '../../services/stylusInputService';
+import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
 
 const Container = styled.div`
@@ -192,9 +195,11 @@ const NameMemoryTest: React.FC = () => {
   
   const [inputText, setInputText] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
+
   const [isInMemorizePhase, setIsInMemorizePhase] = useState(true);
   const [memorizeTimeRemaining, setMemorizeTimeRemaining] = useState(30);
   const [timeElapsed, setTimeElapsed] = useState(0);
+
   const [timeRemaining, setTimeRemaining] = useState<number | null>(90);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
@@ -215,6 +220,7 @@ const NameMemoryTest: React.FC = () => {
   // Memorization phase timer (30 seconds)
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
+
     if (isInMemorizePhase && memorizeTimeRemaining > 0) {
       interval = setInterval(() => {
         setMemorizeTimeRemaining(prev => {
@@ -224,6 +230,7 @@ const NameMemoryTest: React.FC = () => {
             setHasStarted(true);
             setTimeRemaining(90);
             return 0;
+
           }
           return prev - 1;
         });
@@ -232,10 +239,13 @@ const NameMemoryTest: React.FC = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
+
   }, [isInMemorizePhase, memorizeTimeRemaining]);
+
 
   // Main test timer (90 seconds)
   useEffect(() => {
+
     let interval: NodeJS.Timeout | undefined;
     if (hasStarted && !isSubmitted && timeRemaining !== null && timeRemaining > 0) {
       interval = setInterval(() => {
@@ -261,8 +271,11 @@ const NameMemoryTest: React.FC = () => {
     setIsInMemorizePhase(false);
     setHasStarted(true);
     setTimeRemaining(90);
+
+
   };
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
 
   const handleTextChange = (value: string) => {
     if (isSubmitted || !hasStarted) return;
@@ -273,6 +286,7 @@ const NameMemoryTest: React.FC = () => {
     const finalScore = calculateScore(inputText);
     setScore(finalScore);
     setIsSubmitted(true);
+
   };
 
   useEffect(() => {
@@ -322,8 +336,9 @@ const NameMemoryTest: React.FC = () => {
     <Container>
       <TestHarness
         title="Name Memory Test"
-        step={14}
+        step={ 14 }
         totalSteps={21}
+
         instructions={isInMemorizePhase || hasStarted ? null : instructions}
         onQuit={() => navigate('/tasks')}
         onPause={() => {}}
@@ -408,6 +423,7 @@ const NameMemoryTest: React.FC = () => {
               </Controls>
             )}
           </>
+
         )}
       </TestHarness>
     </Container>
