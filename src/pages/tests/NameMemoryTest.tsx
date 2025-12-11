@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 
-import { RotateCcw, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { RotateCcw, CheckCircle, AlertCircle, Clock, Send } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
@@ -340,8 +340,6 @@ const NameMemoryTest: React.FC = () => {
         totalSteps={21}
 
         instructions={isInMemorizePhase || hasStarted ? null : instructions}
-        onQuit={() => navigate('/tasks')}
-        onPause={() => {}}
       >
         {isInMemorizePhase ? (
           <>
