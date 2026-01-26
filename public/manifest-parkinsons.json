@@ -1,0 +1,26 @@
+{
+  "short_name": "Parkinson's Screen",
+  "name": "Parkinson's Early Screening",
+  "description": "Parkinson's disease screening and awareness platform",
+  "icons": [
+    {
+      "src": "images/logo.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "images/logo.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/parkinsons",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "theme_color": "#667eea",
+  "background_color": "#ffffff"
+}
+

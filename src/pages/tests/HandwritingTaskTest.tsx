@@ -5,7 +5,8 @@ import { RotateCcw, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
-import { HANDWRITING_TASKS } from '../../data/handwritingTasks';
+import { getTasksForDisease } from '../../data/handwritingTasks';
+import { useDisease } from '../../context/DiseaseContext';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -132,8 +133,10 @@ const HandwritingTaskTest: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
+  const { currentDisease } = useDisease();
   
-  const task = HANDWRITING_TASKS.find(t => t.id === taskId);
+  const tasks = getTasksForDisease(currentDisease);
+  const task = tasks.find(t => t.id === taskId);
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);

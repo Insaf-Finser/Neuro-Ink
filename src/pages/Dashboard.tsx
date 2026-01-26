@@ -19,12 +19,13 @@ import {
 } from 'lucide-react';
 
 import { useTaskCompletion } from '../hooks/useTaskCompletion';
-import { HANDWRITING_TASKS } from '../data/handwritingTasks';
+import { HANDWRITING_TASKS, getTasksForDisease } from '../data/handwritingTasks';
 import TaskProgressTracker from '../components/TaskProgressTracker';
 import DataExportPanel from '../components/DataExportPanel';
 import { getTestResults, getCompletedTaskIds } from '../services/resultsStorageService';
 import { sessionStorageService } from '../services/sessionStorageService';
 import { useAuth } from '../context/AuthContext';
+import { useDisease } from '../context/DiseaseContext';
 
 const DashboardContainer = styled.div`
   padding: 20px 12px;
@@ -353,6 +354,7 @@ const DataButton = styled.button<{ $variant?: 'primary' | 'danger' }>`
 const Dashboard: React.FC = () => {
   const { getCompletionStats } = useTaskCompletion();
   const { user } = useAuth();
+  const { currentDisease } = useDisease();
   const [completionStats, setCompletionStats] = useState<any>(null);
   const [testResults, setTestResults] = useState<any[]>([]);
   const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
@@ -381,8 +383,9 @@ const Dashboard: React.FC = () => {
         const allCompleted = new Set([...firebaseCompleted, ...sessionCompleted]);
         setCompletedTaskIds(Array.from(allCompleted));
         
-        // Calculate stats
-        const totalTasks = HANDWRITING_TASKS.length;
+        // Calculate stats using disease-aware tasks
+        const tasks = getTasksForDisease(currentDisease);
+        const totalTasks = tasks.length;
         const completedCount = allCompleted.size;
         const completionRate = totalTasks > 0 ? (completedCount / totalTasks) * 100 : 0;
         
@@ -522,7 +525,8 @@ const Dashboard: React.FC = () => {
         <StatusSection>
           <StatusTitle>Recent Tests</StatusTitle>
           {testResults.slice(0, 5).map((result, index) => {
-            const task = HANDWRITING_TASKS.find(t => t.id === result.taskId);
+            const tasks = getTasksForDisease(currentDisease);
+            const task = tasks.find(t => t.id === result.taskId);
             if (!task) return null;
             
             const status = getTaskStatus(result.taskId);

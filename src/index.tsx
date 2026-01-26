@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { AppFlowProvider } from './context/AppFlowContext';
+import { DiseaseProvider } from './context/DiseaseContext';
 import App from './App';
 import './index.css';
 
@@ -39,10 +40,12 @@ root.render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <AppFlowProvider>
-          <App />
-          <Toaster position="top-right" />
-        </AppFlowProvider>
+        <DiseaseProvider>
+          <AppFlowProvider>
+            <App />
+            <Toaster position="top-right" />
+          </AppFlowProvider>
+        </DiseaseProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>

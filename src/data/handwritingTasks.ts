@@ -1,6 +1,8 @@
 // Comprehensive handwriting tasks for cognitive assessment
 // Based on DARWIN dataset and clinical cognitive assessment protocols
 
+import { DiseaseType } from '../context/DiseaseContext';
+
 export interface HandwritingTask {
   id: string;
   name: string;
@@ -334,3 +336,22 @@ export const TASK_DIFFICULTY_LEVELS = {
   medium: 'Medium', 
   hard: 'Hard'
 };
+
+/**
+ * Get tasks for a specific disease
+ * @param disease - The disease type ('alzheimers' | 'parkinsons')
+ * @returns Array of tasks for the specified disease
+ */
+export function getTasksForDisease(disease: DiseaseType): HandwritingTask[] {
+  switch (disease) {
+    case 'alzheimers':
+      // Return existing Alzheimer's tasks
+      return HANDWRITING_TASKS;
+    case 'parkinsons':
+      // Parkinson's tasks not implemented yet
+      return [];
+    default:
+      // Default to Alzheimer's for backward compatibility
+      return HANDWRITING_TASKS;
+  }
+}

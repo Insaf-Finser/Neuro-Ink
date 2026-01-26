@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 
 import { sessionStorageService } from '../services/sessionStorageService';
-import { HANDWRITING_TASKS } from '../data/handwritingTasks';
+import { HANDWRITING_TASKS, getTasksForDisease } from '../data/handwritingTasks';
+import { useDisease } from '../context/DiseaseContext';
 
 const ResultsContainer = styled.div`
   padding: 40px 0;

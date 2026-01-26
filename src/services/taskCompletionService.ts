@@ -2,9 +2,10 @@
 // Handles task completion, data saving, and AI analysis integration
 
 import { sessionStorageService } from './sessionStorageService';
-import { aiAnalysisService } from './aiAnalysisService';
 import { enhancedAIAnalysisService, EnhancedAIAnalysisResult } from './enhancedAIAnalysisService';
-import { HANDWRITING_TASKS } from '../data/handwritingTasks';
+import { AnalysisServiceFactory } from './analysis/AnalysisServiceFactory';
+import { getTasksForDisease } from '../data/handwritingTasks';
+import { DiseaseType } from '../context/DiseaseContext';
 
 export interface TaskCompletionData {
   taskId: string;
@@ -191,8 +192,9 @@ class TaskCompletionService {
       return { isValid: false, error: 'Drawing time too short for meaningful analysis' };
     }
 
-    // Check if task exists in our task list
-    const task = HANDWRITING_TASKS.find(t => t.id === data.taskId);
+    // Check if task exists in our task list (use disease-aware lookup, defaults to 'alzheimers')
+    const tasks = getTasksForDisease('alzheimers');
+    const task = tasks.find(t => t.id === data.taskId);
     if (!task) {
       return { isValid: false, error: 'Invalid task ID' };
     }
@@ -251,8 +253,9 @@ class TaskCompletionService {
       canvasSize: data.canvasSize
     };
 
-    // Perform basic AI analysis
-    const analysisResult = await aiAnalysisService.analyzeHandwriting(handwritingData);
+    // Perform basic AI analysis using disease-aware service (defaults to 'alzheimers')
+    const analysisService = AnalysisServiceFactory.getService('alzheimers');
+    const analysisResult = analysisService.analyzeHandwriting(handwritingData);
     
     return analysisResult;
   }

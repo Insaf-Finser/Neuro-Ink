@@ -9,7 +9,8 @@ import Welcome from '../pages/Welcome';
 import ConsentForm from '../pages/ConsentForm';
 import FlowTaskSelection from './FlowTaskSelection';
 import Results from '../pages/Results';
-import { HANDWRITING_TASKS } from '../data/handwritingTasks';
+import { getTasksForDisease } from '../data/handwritingTasks';
+import { useDisease } from '../context/DiseaseContext';
 import { getTestComponent } from '../utils/testTaskMapping';
 
 const FlowContainer = styled.div`

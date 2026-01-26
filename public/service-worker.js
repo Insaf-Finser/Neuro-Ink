@@ -2,7 +2,9 @@ const CACHE_NAME = 'my-app-cache-v1';
 const urlsToCache = [
     '/',
     '/index.html',
-    '/offline.html'
+    '/offline.html',
+    '/parkinsons',
+    '/alzheimers'
 ];
 
 

@@ -3,6 +3,7 @@ import { AIAnalysisResult } from './aiAnalysisService';
 import { collection, addDoc, getDocs, query, where, orderBy, deleteDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { getTaskIdFromTestName } from '../utils/testTaskMapping';
+import { DiseaseType } from '../context/DiseaseContext';
 
 export interface StoredTestResult {
   testName: string;
@@ -13,6 +14,7 @@ export interface StoredTestResult {
   validation?: DrawingValidationResult | null;
   aiResult?: AIAnalysisResult | null;
   features?: Record<string, number> | null;
+  disease?: 'alzheimers' | 'parkinsons'; // Disease type (defaults to 'alzheimers' for backward compatibility)
   // Firestore document ID (optional, added when fetched from Firestore)
   id?: string;
 }
@@ -73,7 +75,8 @@ function timestampToISO(timestamp: any): string {
  */
 export async function saveTestResult(
   result: Omit<StoredTestResult, 'userId' | 'completedAt'>, 
-  userId?: string
+  userId?: string,
+  disease?: DiseaseType
 ): Promise<StoredTestResult> {
   const id = userId || getUserId();
   const completedAt = new Date().toISOString();
@@ -81,11 +84,15 @@ export async function saveTestResult(
   // Automatically map testName to taskId if not provided
   const taskId = result.taskId || getTaskIdFromTestName(result.testName) || undefined;
   
+  // Default to 'alzheimers' for backward compatibility if disease not provided
+  const diseaseType: DiseaseType = disease || result.disease || 'alzheimers';
+  
   const entry: StoredTestResult = {
     ...result,
     taskId,
     userId: id,
-    completedAt
+    completedAt,
+    disease: diseaseType
   };
 
   // Always save to localStorage for offline access and guest users
@@ -103,6 +110,7 @@ export async function saveTestResult(
         ...result,
         taskId,
         userId: user.uid,
+        disease: diseaseType,
         completedAt: serverTimestamp(),
         createdAt: serverTimestamp()
       });
@@ -139,6 +147,8 @@ export async function getTestResults(userId?: string): Promise<StoredTestResult[
       const results: StoredTestResult[] = [];
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
+        // Default to 'alzheimers' for backward compatibility if disease not present
+        const diseaseType: DiseaseType = data.disease || 'alzheimers';
         results.push({
           testName: data.testName,
           taskId: data.taskId || getTaskIdFromTestName(data.testName) || undefined,
@@ -148,6 +158,7 @@ export async function getTestResults(userId?: string): Promise<StoredTestResult[
           validation: data.validation || null,
           aiResult: data.aiResult || null,
           features: data.features || null,
+          disease: diseaseType,
           id: docSnap.id
         });
       });
@@ -165,7 +176,13 @@ export async function getTestResults(userId?: string): Promise<StoredTestResult[
 
   // Fallback to localStorage
   const key = getUserKey(id);
-  return JSON.parse(localStorage.getItem(key) || '[]');
+  const results = JSON.parse(localStorage.getItem(key) || '[]');
+  
+  // Ensure all results have disease field (default to 'alzheimers' for backward compatibility)
+  return results.map((result: StoredTestResult) => ({
+    ...result,
+    disease: result.disease || 'alzheimers'
+  }));
 }
 
 /**

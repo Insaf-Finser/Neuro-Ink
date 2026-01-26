@@ -5,10 +5,11 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { CheckCircle, Clock, AlertCircle, TrendingUp, BarChart3 } from 'lucide-react';
 import { useTaskCompletion } from '../hooks/useTaskCompletion';
-import { HANDWRITING_TASKS } from '../data/handwritingTasks';
+import { HANDWRITING_TASKS, getTasksForDisease } from '../data/handwritingTasks';
 import { getTestResults, getCompletedTaskIds } from '../services/resultsStorageService';
 import { sessionStorageService } from '../services/sessionStorageService';
 import { useAuth } from '../context/AuthContext';
+import { useDisease } from '../context/DiseaseContext';
 
 const ProgressContainer = styled.div`
   background: white;
@@ -161,6 +162,7 @@ const CategoryDot = styled.div<{ $color: string }>`
 
 const TaskProgressTracker: React.FC = () => {
   const { user } = useAuth();
+  const { currentDisease } = useDisease();
   const [completionStats, setCompletionStats] = useState<any>(null);
   const [taskProgresses, setTaskProgresses] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
@@ -200,8 +202,9 @@ const TaskProgressTracker: React.FC = () => {
         // Combine both sources
         const allCompleted = new Set([...firebaseCompleted, ...sessionCompleted]);
         
-        // Calculate stats
-        const totalTasks = HANDWRITING_TASKS.length;
+        // Calculate stats using disease-aware tasks
+        const tasks = getTasksForDisease(currentDisease);
+        const totalTasks = tasks.length;
         const completedCount = allCompleted.size;
         const completionRate = totalTasks > 0 ? (completedCount / totalTasks) * 100 : 0;
         
@@ -314,8 +317,8 @@ const TaskProgressTracker: React.FC = () => {
       </ProgressBar>
 
       <TaskList>
-        {HANDWRITING_TASKS.map(task => {
-          const progress = taskProgresses[task.id];
+        {getTasksForDisease(currentDisease).map(task => {
+            const progress = taskProgresses[task.id];
           const isCompleted = progress?.isCompleted || false;
           const score = progress?.score;
 

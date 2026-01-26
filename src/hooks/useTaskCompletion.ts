@@ -4,7 +4,8 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { taskCompletionService } from '../services/taskCompletionService';
-import { HANDWRITING_TASKS } from '../data/handwritingTasks';
+import { getTasksForDisease } from '../data/handwritingTasks';
+import { useDisease } from '../context/DiseaseContext';
 
 export interface TaskCompletionState {
   isCompleting: boolean;
@@ -29,6 +30,7 @@ export interface TaskCompletionData {
 
 export const useTaskCompletion = () => {
   const navigate = useNavigate();
+  const { currentDisease } = useDisease();
   const [isCompleting, setIsCompleting] = useState(false);
   const [completionError, setCompletionError] = useState<string | null>(null);
 
@@ -39,7 +41,8 @@ export const useTaskCompletion = () => {
     setCompletionError(null);
     
     try {
-      const task = HANDWRITING_TASKS.find(t => t.id === completionData.taskId);
+      const tasks = getTasksForDisease(currentDisease);
+      const task = tasks.find(t => t.id === completionData.taskId);
       if (!task) {
         throw new Error('Task not found');
       }

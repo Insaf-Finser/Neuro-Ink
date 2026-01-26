@@ -1,4 +1,5 @@
-import { aiAnalysisService, HandwritingData, CognitiveTestResult, AIAnalysisResult } from './aiAnalysisService';
+import { HandwritingData, CognitiveTestResult, AIAnalysisResult } from './aiAnalysisService';
+import { AnalysisServiceFactory } from './analysis/AnalysisServiceFactory';
 import { StylusPoint } from './stylusInputService';
 
 export interface TestAnalysisResponse {
@@ -41,10 +42,13 @@ export function analyzeTest(
   strokes: StylusPoint[][],
   canvasSize: { width: number; height: number },
   totalTimeMs: number,
-  cognitiveScore?: number
+  cognitiveScore?: number,
+  disease: 'alzheimers' | 'parkinsons' = 'alzheimers'
 ): TestAnalysisResponse {
   const handwritingData = buildHandwritingData(strokes, canvasSize, totalTimeMs);
-  const features = aiAnalysisService.extractFeatures(handwritingData);
+  // Use disease-aware analysis service (defaults to 'alzheimers')
+  const analysisService = AnalysisServiceFactory.getService(disease);
+  const features = analysisService.extractFeatures(handwritingData);
 
   const tests: CognitiveTestResult[] = [];
   if (cognitiveScore !== undefined) {
@@ -57,13 +61,14 @@ export function analyzeTest(
     });
   }
 
-  const aiResult = aiAnalysisService.analyzeSession(handwritingData, tests);
+  const aiResult = analysisService.analyzeSession(handwritingData, tests);
 
   return {
     aiResult,
     features
   };
 }
+
 
 
 

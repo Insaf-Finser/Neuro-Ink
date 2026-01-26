@@ -14,9 +14,10 @@ import {
   CheckCircle,
   BarChart3
 } from 'lucide-react';
-import { HANDWRITING_TASKS, TASK_CATEGORIES } from '../data/handwritingTasks';
+import { HANDWRITING_TASKS, TASK_CATEGORIES, getTasksForDisease } from '../data/handwritingTasks';
 import { sessionStorageService } from '../services/sessionStorageService';
 import { getTestResults, getCompletedTaskIds } from '../services/resultsStorageService';
+import { useDisease } from '../context/DiseaseContext';
 
 const TaskSelectionContainer = styled.div`
   padding: 40px 0;
@@ -319,21 +320,25 @@ const TaskSelection: React.FC = () => {
     loadProgress();
   }, []);
 
+  // Get disease-aware tasks
+  const { currentDisease } = useDisease();
+  const tasks = getTasksForDisease(currentDisease);
+
   // Group tasks by category
-  const tasksByCategory = HANDWRITING_TASKS.reduce((acc, task) => {
+  const tasksByCategory = tasks.reduce((acc, task) => {
     if (!acc[task.category]) {
       acc[task.category] = [];
     }
     acc[task.category].push(task);
     return acc;
-  }, {} as Record<string, typeof HANDWRITING_TASKS>);
+  }, {} as Record<string, typeof tasks>);
 
-  const totalTasks = HANDWRITING_TASKS.length;
+  const totalTasks = tasks.length;
   const completedCount = completedTasks.length;
   const progressPercentage = Math.round((completedCount / totalTasks) * 100);
 
   // Get next incomplete task
-  const nextTask = HANDWRITING_TASKS.find(task => !completedTasks.includes(task.id));
+  const nextTask = tasks.find(task => !completedTasks.includes(task.id));
 
   return (
     <TaskSelectionContainer>

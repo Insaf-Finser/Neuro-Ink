@@ -1,11 +1,13 @@
   import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { Activity, Brain, ClipboardList, Home, Shield, LogOut, User } from 'lucide-react';
+import { Activity, Brain, ClipboardList, Home, Shield, LogOut, User, ChevronDown } from 'lucide-react';
 import InstallPrompt from './InstallPrompt';
 import { useStandalone } from '../hooks/useStandalone';
 import { useAuth } from '../context/AuthContext';
+import { useDisease } from '../context/DiseaseContext';
 import { consentService } from '../services/consentService';
+import { routeRequiresPWA } from '../utils/routeRequiresPWA';
 import toast from 'react-hot-toast';
 
 const AppShell = styled.div`
@@ -186,6 +188,53 @@ const AuthButton = styled(Link)`
   }
 `;
 
+const DiseaseSelector = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px;
+  flex-shrink: 0;
+`;
+
+const DiseaseSelect = styled.select`
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 6px 28px 6px 10px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  transition: all 0.2s;
+  outline: none;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  &:focus {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(102, 126, 234, 0.6);
+  }
+
+  option {
+    background: #1f2937;
+    color: white;
+  }
+`;
+
+const SelectIcon = styled(ChevronDown)`
+  position: absolute;
+  right: 8px;
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.7);
+  width: 14px;
+  height: 14px;
+`;
+
 const Surface = styled.div<{ $hasNavbar?: boolean }>`
   flex: 1;
   background: #f7f7fb;
@@ -339,6 +388,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(true);
   const isStandalone = useStandalone();
   const { user, signOut, loading: authLoading } = useAuth();
+  const { currentDisease, setDisease } = useDisease();
   const [consentAccepted, setConsentAccepted] = useState<boolean | null>(null);
   const [consentLoading, setConsentLoading] = useState(true);
 
@@ -487,6 +537,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
+  const handleDiseaseChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const newDisease = event.target.value as 'alzheimers' | 'parkinsons';
+    setDisease(newDisease);
+    // Update route to match disease
+    navigate(`/${newDisease}`);
+  };
+
   if (!isMobileOrTablet) {
     return (
       <AppShell>
@@ -499,6 +556,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <Tagline>Optimized for touch devices</Tagline>
               </Title>
             </TitleBlock>
+            <DiseaseSelector>
+              <DiseaseSelect value={currentDisease} onChange={handleDiseaseChange}>
+                <option value="alzheimers">Alzheimer's</option>
+                <option value="parkinsons">Parkinson's</option>
+              </DiseaseSelect>
+              <SelectIcon />
+            </DiseaseSelector>
             <UserMenu>
               {user ? (
                 <>
@@ -533,18 +597,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     );
   }
 
-  if (!isStandalone) {
+  // Check if current route requires PWA install
+  const requiresPWA = routeRequiresPWA(location.pathname);
+
+  // Only enforce standalone mode on routes that require PWA install
+  if (requiresPWA && !isStandalone) {
     return (
       <AppShell>
-        <TopBar>
-          <TitleBlock>
-            <Brain size={32} />
-            <Title>
-              <AppName>NeuroInk</AppName>
-              <Tagline>Install to continue</Tagline>
-            </Title>
-          </TitleBlock>
-          <UserMenu>
+          <TopBar>
+            <TitleBlock>
+              <Brain size={32} />
+              <Title>
+                <AppName>NeuroInk</AppName>
+                <Tagline>Install to continue</Tagline>
+              </Title>
+            </TitleBlock>
+            <DiseaseSelector>
+              <DiseaseSelect value={currentDisease} onChange={handleDiseaseChange}>
+                <option value="alzheimers">Alzheimer's</option>
+                <option value="parkinsons">Parkinson's</option>
+              </DiseaseSelect>
+              <SelectIcon />
+            </DiseaseSelector>
+            <UserMenu>
             {user ? (
               <>
                 <UserInfo>
@@ -572,7 +647,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               For secure, full-screen testing we require the PWA to be installed on your phone or tablet.
             </NoticeText>
             <StepList>
-              <li>Tap “Add to Home Screen” when prompted.</li>
+              <li>Tap "Add to Home Screen" when prompted.</li>
               <li>Open NeuroInk from your home screen icon.</li>
               <li>Run assessments offline with full-screen capture.</li>
             </StepList>
@@ -584,16 +659,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <AppShell>
-      {shouldShowNavbar && (
-        <TopBar>
-          <TitleBlock>
-            <Brain size={32} />
-            <Title>
-              <AppName>NeuroInk</AppName>
-              <Tagline>AI-powered cognitive screening</Tagline>
-            </Title>
-          </TitleBlock>
-          <UserMenu>
+        {shouldShowNavbar && (
+          <TopBar>
+            <TitleBlock>
+              <Brain size={32} />
+              <Title>
+                <AppName>NeuroInk</AppName>
+                <Tagline>AI-powered cognitive screening</Tagline>
+              </Title>
+            </TitleBlock>
+            <DiseaseSelector>
+              <DiseaseSelect value={currentDisease} onChange={handleDiseaseChange}>
+                <option value="alzheimers">Alzheimer's</option>
+                <option value="parkinsons">Parkinson's</option>
+              </DiseaseSelect>
+              <SelectIcon />
+            </DiseaseSelector>
+            <UserMenu>
             {user ? (
               <>
                 <UserInfo>
@@ -615,7 +697,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </TopBar>
       )}
 
-      <InstallPrompt />
+      {/* Only show InstallPrompt on routes that require PWA install */}
+      {requiresPWA && <InstallPrompt />}
 
       <Surface $hasNavbar={shouldShowNavbar}>
         <Main>{children}</Main>
