@@ -52,3 +52,4 @@ export interface AnalysisService {
   validateHandwritingData(data: HandwritingData): { isValid: boolean; errors: string[] };
 }
 
+

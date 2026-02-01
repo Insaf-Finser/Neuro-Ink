@@ -62,3 +62,4 @@ export const PARKINSONS_TASK_CATEGORIES = {
   coordination: 'Coordination Tasks'
 };
 
+

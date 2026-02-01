@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 export type DiseaseType = 'alzheimers' | 'parkinsons';
 
@@ -22,8 +22,25 @@ interface DiseaseProviderProps {
 }
 
 export const DiseaseProvider: React.FC<DiseaseProviderProps> = ({ children }) => {
-  // Default to 'alzheimers' - the only active disease
-  const [currentDisease, setCurrentDisease] = useState<DiseaseType>('alzheimers');
+  // Load persisted disease from localStorage or default to 'alzheimers'
+  const getInitialDisease = (): DiseaseType => {
+    if (typeof window !== 'undefined') {
+      const persisted = localStorage.getItem('selectedDisease');
+      if (persisted === 'alzheimers' || persisted === 'parkinsons') {
+        return persisted;
+      }
+    }
+    return 'alzheimers';
+  };
+
+  const [currentDisease, setCurrentDisease] = useState<DiseaseType>(getInitialDisease);
+
+  // Persist disease changes to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selectedDisease', currentDisease);
+    }
+  }, [currentDisease]);
 
   const value: DiseaseContextType = {
     currentDisease,

@@ -1,8 +1,9 @@
-  import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { Activity, Brain, ClipboardList, Home, Shield, LogOut, User, ChevronDown } from 'lucide-react';
+import { Activity, Brain, ClipboardList, Home, Shield, LogOut, User } from 'lucide-react';
 import InstallPrompt from './InstallPrompt';
+import DiseaseToggle from './DiseaseToggle';
 import { useStandalone } from '../hooks/useStandalone';
 import { useAuth } from '../context/AuthContext';
 import { useDisease } from '../context/DiseaseContext';
@@ -21,9 +22,18 @@ const AppShell = styled.div`
   overflow-x: hidden;
   height: 100vh;
   height: -webkit-fill-available;
+  width: 100%;
+  max-width: 100%;
+  
+  @media (min-width: 1025px) {
+    padding: 10px;
+    height: auto;
+    min-height: 100vh;
+  }
+  
 `;
 
-const TopBar = styled.header`
+const TopBar = styled.header<{ $transparent?: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
@@ -37,14 +47,33 @@ const TopBar = styled.header`
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: rgba(17, 24, 39, 0.8);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: ${props => props.$transparent 
+    ? 'transparent' 
+    : 'rgba(17, 24, 39, 0.8)'};
+  backdrop-filter: ${props => props.$transparent 
+    ? 'none' 
+    : 'blur(12px)'};
+  border-bottom: ${props => props.$transparent 
+    ? 'none' 
+    : '1px solid rgba(255, 255, 255, 0.08)'};
   color: white;
   box-sizing: border-box;
   overflow: hidden;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  
+  @media (min-width: 1025px) {
+    position: relative;
+    border-radius: 0;
+    margin: 0;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 16px 24px;
+    background: ${props => props.$transparent 
+      ? 'transparent' 
+      : 'rgba(17, 24, 39, 0.8)'};
+  }
 `;
 
 const TitleBlock = styled.div`
@@ -53,6 +82,34 @@ const TitleBlock = styled.div`
   gap: 12px;
   flex-shrink: 0;
   min-width: 0;
+`;
+
+const HomeOverlay = styled.div`
+  position: fixed;
+  color: white;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: 100%;
+  z-index: 120;
+  padding: calc(10px + env(safe-area-inset-top)) 12px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+  
+  > * {
+    pointer-events: auto;
+  }
+  
+  @media (min-width: 1025px) {
+    padding: 20px 24px;
+    max-width: 100%;
+    margin: 0;
+    position: relative;
+  }
 `;
 
 const Title = styled.div`
@@ -68,6 +125,7 @@ const AppName = styled.span`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: rgba(255, 255, 255, 0.8);
 `;
 
 const Tagline = styled.span`
@@ -188,72 +246,38 @@ const AuthButton = styled(Link)`
   }
 `;
 
-const DiseaseSelector = styled.div`
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 12px;
-  flex-shrink: 0;
-`;
 
-const DiseaseSelect = styled.select`
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 8px;
-  padding: 6px 28px 6px 10px;
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  appearance: none;
-  transition: all 0.2s;
-  outline: none;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.18);
-    border-color: rgba(255, 255, 255, 0.25);
-  }
-
-  &:focus {
-    background: rgba(255, 255, 255, 0.18);
-    border-color: rgba(102, 126, 234, 0.6);
-  }
-
-  option {
-    background: #1f2937;
-    color: white;
-  }
-`;
-
-const SelectIcon = styled(ChevronDown)`
-  position: absolute;
-  right: 8px;
-  pointer-events: none;
-  color: rgba(255, 255, 255, 0.7);
-  width: 14px;
-  height: 14px;
-`;
-
-const Surface = styled.div<{ $hasNavbar?: boolean }>`
+const Surface = styled.div<{ $hasNavbar?: boolean; $hasBottomNav?: boolean }>`
   flex: 1;
   background: #f7f7fb;
   border-radius: 18px 18px 0 0;
-  margin-top: ${props => props.$hasNavbar ? 'calc(60px + env(safe-area-inset-top) + 8px)' : '0'};
+  margin-top: ${props => props.$hasNavbar ? 'calc(60px + env(safe-area-inset-top) + 8px)' : '10px'};
+  margin-left: 10px;
+  margin-right: 10px;
+  margin-bottom: 10px;
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.2);
-  padding: 12px 12px ${props => props.$hasNavbar ? 'calc(100px + env(safe-area-inset-bottom))' : 'calc(12px + env(safe-area-inset-bottom))'};
-  max-width: 1024px;
-  width: 100%;
-  margin-left: auto;
-  margin-right: auto;
+  padding: 12px 12px ${props => props.$hasBottomNav ? 'calc(100px + env(safe-area-inset-bottom))' : 'calc(12px + env(safe-area-inset-bottom))'};
+  max-width: calc(100% - 20px);
+  width: calc(100% - 20px);
   display: flex;
   flex-direction: column;
+  
+  @media (min-width: 1025px) {
+    border-radius: 18px;
+    margin-top: ${props => props.$hasNavbar ? 'calc(60px + env(safe-area-inset-top) + 10px)' : '10px'};
+    margin-bottom: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+    padding: 24px;
+    max-width: calc(100% - 20px);
+    width: calc(100% - 20px);
+  }
 `;
 
 const Main = styled.main`
   flex: 1;
   width: 100%;
-  max-width: 960px;
+  max-width: 100%;
   margin: 0 auto;
 `;
 
@@ -275,6 +299,11 @@ const BottomNavWrapper = styled.div`
   justify-content: center;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  
+  @media (min-width: 1025px) {
+    position: relative;
+    margin-top: 20px;
+  }
 `;
 
 const BottomNav = styled.nav`
@@ -289,6 +318,14 @@ const BottomNav = styled.nav`
   gap: 8px;
   box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.16);
   box-sizing: border-box;
+  
+  @media (min-width: 1025px) {
+    max-width: 1200px;
+    border-radius: 12px;
+    border-top: none;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+    padding: 12px 16px;
+  }
 `;
 
 const NavButton = styled(Link)<{ $active?: boolean }>`
@@ -499,13 +536,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, []);
 
   const navItems = useMemo(
-    () => [
-      { to: '/', label: 'Home', icon: <Home /> },
-      { to: '/dashboard', label: 'Dashboard', icon: <Shield /> },
-      { to: '/tasks', label: 'Tasks', icon: <ClipboardList /> },
-      { to: '/results', label: 'Results', icon: <Activity /> },
-    ],
-    []
+    () => {
+      // In standalone mode (PWA), use disease-scoped routes
+      // In website mode, use old routes that will be redirected
+      const basePath = isStandalone ? `/${currentDisease}` : '';
+      return [
+        { to: '/', label: 'Home', icon: <Home /> },
+        { to: `${basePath}/dashboard`, label: 'Dashboard', icon: <Shield /> },
+        { to: `${basePath}/tasks`, label: 'Tasks', icon: <ClipboardList /> },
+        { to: `${basePath}/results`, label: 'Results', icon: <Activity /> },
+      ];
+    },
+    [isStandalone, currentDisease]
   );
 
   // Determine if navbar should be shown
@@ -513,18 +555,38 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const publicPages = ['/', '/welcome', '/consent', '/login', '/signup', '/about', '/contact'];
   const isPublicPage = publicPages.includes(location.pathname);
   const shouldShowNavbar = consentAccepted === true || isPublicPage || consentLoading;
+  
+  // Make navbar transparent on home page
+  const isHomePage = location.pathname === '/';
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
-    if (path === '/tasks') return location.pathname.startsWith('/test') || location.pathname.startsWith('/tasks');
-    if (path === '/results') {
+    
+    // Extract the route name (e.g., '/dashboard' from '/alzheimers/dashboard')
+    const routeName = path.replace(`/${currentDisease}`, '') || path;
+    
+    // Check if pathname matches the route (handles both old and disease-scoped routes)
+    if (routeName === '/tasks') {
+      return location.pathname.startsWith('/test') || 
+             location.pathname.startsWith('/tasks') ||
+             location.pathname.startsWith(`/${currentDisease}/test`) ||
+             location.pathname.startsWith(`/${currentDisease}/tasks`);
+    }
+    if (routeName === '/results') {
       return (
         location.pathname.startsWith('/results') ||
         location.pathname.startsWith('/ai-analysis') ||
-        location.pathname.startsWith('/comprehensive-results')
+        location.pathname.startsWith('/comprehensive-results') ||
+        location.pathname.startsWith(`/${currentDisease}/results`) ||
+        location.pathname.startsWith(`/${currentDisease}/ai-analysis`) ||
+        location.pathname.startsWith(`/${currentDisease}/comprehensive-results`)
       );
     }
-    return location.pathname.startsWith(path);
+    // For dashboard and other routes, check both old and disease-scoped paths
+    return location.pathname === path || 
+           location.pathname.startsWith(path + '/') ||
+           location.pathname === routeName ||
+           location.pathname.startsWith(routeName + '/');
   };
 
   const handleSignOut = async () => {
@@ -537,65 +599,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
-  const handleDiseaseChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newDisease = event.target.value as 'alzheimers' | 'parkinsons';
-    setDisease(newDisease);
-    // Update route to match disease
-    navigate(`/${newDisease}`);
-  };
 
-  if (!isMobileOrTablet) {
-    return (
-      <AppShell>
-        {shouldShowNavbar && (
-          <TopBar>
-            <TitleBlock>
-              <Brain size={32} />
-              <Title>
-                <AppName>NeuroInk</AppName>
-                <Tagline>Optimized for touch devices</Tagline>
-              </Title>
-            </TitleBlock>
-            <DiseaseSelector>
-              <DiseaseSelect value={currentDisease} onChange={handleDiseaseChange}>
-                <option value="alzheimers">Alzheimer's</option>
-                <option value="parkinsons">Parkinson's</option>
-              </DiseaseSelect>
-              <SelectIcon />
-            </DiseaseSelector>
-            <UserMenu>
-              {user ? (
-                <>
-                  <UserInfo>
-                    <UserEmail>{user.email}</UserEmail>
-                    <UserStatus>Signed in</UserStatus>
-                  </UserInfo>
-                  <SignOutButton onClick={handleSignOut}>
-                    <LogOut size={14} />
-                    <span>Sign Out</span>
-                  </SignOutButton>
-                </>
-              ) : (
-                <AuthButton to="/login">
-                  <User size={14} />
-                  <span>Sign In</span>
-                </AuthButton>
-              )}
-            </UserMenu>
-          </TopBar>
-        )}
-        <DesktopNotice>
-          <NoticeCard>
-            <NoticeTitle>This experience is mobile-first</NoticeTitle>
-            <NoticeText>
-              NeuroInk is designed to run as a Progressive Web App on phones and tablets.
-              Please open this link on a mobile device or resize below 1080px to preview the app UI.
-            </NoticeText>
-          </NoticeCard>
-        </DesktopNotice>
-      </AppShell>
-    );
-  }
+  // Load persisted disease on mount and when PWA is installed
+  useEffect(() => {
+    if (isStandalone) {
+      // In PWA mode, load persisted disease or use current
+      const persistedDisease = localStorage.getItem('selectedDisease') as 'alzheimers' | 'parkinsons' | null;
+      if (persistedDisease && persistedDisease !== currentDisease) {
+        setDisease(persistedDisease);
+      } else if (!persistedDisease) {
+        // Persist current disease if not already persisted
+        localStorage.setItem('selectedDisease', currentDisease);
+      }
+    }
+  }, [isStandalone, currentDisease, setDisease]);
 
   // Check if current route requires PWA install
   const requiresPWA = routeRequiresPWA(location.pathname);
@@ -604,7 +621,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   if (requiresPWA && !isStandalone) {
     return (
       <AppShell>
-          <TopBar>
+          <TopBar $transparent={isHomePage}>
             <TitleBlock>
               <Brain size={32} />
               <Title>
@@ -612,13 +629,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <Tagline>Install to continue</Tagline>
               </Title>
             </TitleBlock>
-            <DiseaseSelector>
-              <DiseaseSelect value={currentDisease} onChange={handleDiseaseChange}>
-                <option value="alzheimers">Alzheimer's</option>
-                <option value="parkinsons">Parkinson's</option>
-              </DiseaseSelect>
-              <SelectIcon />
-            </DiseaseSelector>
+            {/* Show disease toggle in website mode (not standalone/PWA) */}
+            {!isStandalone && <DiseaseToggle />}
             <UserMenu>
             {user ? (
               <>
@@ -659,8 +671,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <AppShell>
-        {shouldShowNavbar && (
-          <TopBar>
+        {isHomePage ? (
+          // On home page, show overlay without navbar background
+          <HomeOverlay>
             <TitleBlock>
               <Brain size={32} />
               <Title>
@@ -668,39 +681,66 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <Tagline>AI-powered cognitive screening</Tagline>
               </Title>
             </TitleBlock>
-            <DiseaseSelector>
-              <DiseaseSelect value={currentDisease} onChange={handleDiseaseChange}>
-                <option value="alzheimers">Alzheimer's</option>
-                <option value="parkinsons">Parkinson's</option>
-              </DiseaseSelect>
-              <SelectIcon />
-            </DiseaseSelector>
             <UserMenu>
-            {user ? (
-              <>
-                <UserInfo>
-                  <UserEmail>{user.email}</UserEmail>
-                  <UserStatus>Signed in</UserStatus>
-                </UserInfo>
-                <SignOutButton onClick={handleSignOut}>
-                  <LogOut size={14} />
-                  <span>Sign Out</span>
-                </SignOutButton>
-              </>
-            ) : (
-              <AuthButton to="/login">
-                <User size={14} />
-                <span>Sign In</span>
-              </AuthButton>
-            )}
-          </UserMenu>
-        </TopBar>
-      )}
+              {user ? (
+                <>
+                  <UserInfo>
+                    <UserEmail>{user.email}</UserEmail>
+                    <UserStatus>Signed in</UserStatus>
+                  </UserInfo>
+                  <SignOutButton onClick={handleSignOut}>
+                    <LogOut size={14} />
+                    <span>Sign Out</span>
+                  </SignOutButton>
+                </>
+              ) : (
+                <AuthButton to="/login">
+                  <User size={14} />
+                  <span>Sign In</span>
+                </AuthButton>
+              )}
+            </UserMenu>
+          </HomeOverlay>
+        ) : (
+          // On other pages, show normal navbar
+          shouldShowNavbar && (
+            <TopBar $transparent={isHomePage}>
+              <TitleBlock>
+                <Brain size={32} />
+                <Title>
+                  <AppName>NeuroInk</AppName>
+                  <Tagline>AI-powered cognitive screening</Tagline>
+                </Title>
+              </TitleBlock>
+              {/* Show disease toggle in website mode (not standalone/PWA) */}
+              {!isStandalone && <DiseaseToggle />}
+              <UserMenu>
+                {user ? (
+                  <>
+                    <UserInfo>
+                      <UserEmail>{user.email}</UserEmail>
+                      <UserStatus>Signed in</UserStatus>
+                    </UserInfo>
+                    <SignOutButton onClick={handleSignOut}>
+                      <LogOut size={14} />
+                      <span>Sign Out</span>
+                    </SignOutButton>
+                  </>
+                ) : (
+                  <AuthButton to="/login">
+                    <User size={14} />
+                    <span>Sign In</span>
+                  </AuthButton>
+                )}
+              </UserMenu>
+            </TopBar>
+          )
+        )}
 
       {/* Only show InstallPrompt on routes that require PWA install */}
       {requiresPWA && <InstallPrompt />}
 
-      <Surface $hasNavbar={shouldShowNavbar}>
+      <Surface $hasNavbar={shouldShowNavbar && !isHomePage} $hasBottomNav={isStandalone && shouldShowNavbar}>
         <Main>{children}</Main>
         <Footer>
           <p>&copy; 2025 NeuroInk — built for clinical-grade mobile capture.</p>
@@ -708,7 +748,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </Footer>
       </Surface>
 
-      {shouldShowNavbar && (
+      {/* Only show bottom nav when PWA is installed (standalone mode) */}
+      {shouldShowNavbar && isStandalone && (
         <BottomNavWrapper>
           <BottomNav>
             {navItems.map(item => (

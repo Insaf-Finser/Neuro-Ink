@@ -154,20 +154,11 @@ const Home: React.FC = () => {
   const handleStartAssessment = async () => {
     setLoading(true);
     try {
-      // Check if consent is accepted
-      const consentAccepted = await consentService.isConsentAccepted();
-      
-      if (consentAccepted) {
-        // If consent is accepted, go directly to tasks
-        navigate('/tasks');
-      } else {
-        // If consent is not accepted, go to welcome page (which leads to consent form)
-        navigate('/welcome');
-      }
+      // Navigate directly to Alzheimer's awareness page
+      navigate('/alzheimers');
     } catch (error) {
-      console.error('Error checking consent:', error);
-      // On error, default to welcome page
-      navigate('/welcome');
+      console.error('Error navigating:', error);
+      navigate('/alzheimers');
     } finally {
       setLoading(false);
     }

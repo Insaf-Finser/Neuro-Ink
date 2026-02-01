@@ -228,7 +228,7 @@ const ParkinsonsTest: React.FC = () => {
 
   const handleComplete = () => {
     // Collect strokes (but don't analyze or store)
-    const currentStrokes = canvasRef.current?.getStrokes() || [];
+    const currentStrokes = canvasRef.current?.getAllStrokes() || [];
     
     // Discard data - this is UI only
     console.log('Task completed (data discarded - UI prototype only)');
@@ -292,8 +292,6 @@ const ParkinsonsTest: React.FC = () => {
           onStrokeEnd={(stroke) => {
             setStrokes(prev => [...prev, stroke]);
           }}
-          width={800}
-          height={600}
         />
 
         <Controls>

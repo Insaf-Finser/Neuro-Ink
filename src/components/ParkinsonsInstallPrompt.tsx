@@ -194,3 +194,4 @@ const ParkinsonsInstallPrompt: React.FC<ParkinsonsInstallPromptProps> = ({ onDis
 
 export default ParkinsonsInstallPrompt;
 
+

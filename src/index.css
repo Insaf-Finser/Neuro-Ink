@@ -37,9 +37,9 @@ code {
 }
 
 .container {
-  width: 100%;
-  max-width: 760px;
-  margin: 0 auto;
+  width: calc(100% - 20px);
+  max-width: calc(100% - 20px);
+  margin: 10px auto;
   padding: 0 16px;
 }
 
@@ -129,6 +129,7 @@ code {
   }
 }
 
+/* Responsive styles for mobile devices */
 @media (max-width: 720px) {
   .card {
     padding: 20px;
@@ -137,5 +138,59 @@ code {
 
   .btn {
     width: 100%;
+  }
+}
+
+/* Responsive styles for tablets */
+@media (min-width: 721px) and (max-width: 1024px) {
+  .container {
+    width: calc(100% - 20px);
+    max-width: calc(100% - 20px);
+    margin: 10px auto;
+    padding: 0 24px;
+  }
+
+  .card {
+    padding: 28px;
+  }
+}
+
+/* Responsive styles for desktop */
+@media (min-width: 1025px) {
+  .container {
+    width: calc(100% - 20px);
+    max-width: calc(100% - 20px);
+    margin: 10px auto;
+    padding: 0 32px;
+  }
+
+  .card {
+    padding: 32px;
+    margin: 24px 0;
+  }
+
+  .btn {
+    padding: 14px 28px;
+    font-size: 16px;
+  }
+
+  .grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+}
+
+/* Ensure touch targets are appropriately sized on all devices */
+@media (pointer: coarse) {
+  .btn,
+  button,
+  a {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
