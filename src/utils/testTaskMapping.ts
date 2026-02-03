@@ -18,6 +18,8 @@ import SentenceMemoryTest from '../pages/tests/SentenceMemoryTest';
 import SignaturePracticeTest from '../pages/tests/SignaturePracticeTest';
 import ComplexFigureCopyTest from '../pages/tests/ComplexFigureCopyTest';
 import LineTracingTest from '../pages/tests/LineTracingTest';
+import MazeNavigationTest from '../pages/tests/MazeNavigationTest';
+import PatternCompletionTest from '../pages/tests/PatternCompletionTest';
 import NameMemoryTest from '../pages/tests/NameMemoryTest';
 import NumberMemoryTest from '../pages/tests/NumberMemoryTest';
 import RapidWritingTest from '../pages/tests/RapidWritingTest';
@@ -65,6 +67,8 @@ const TASK_TO_COMPONENT_MAP: Record<string, React.ComponentType<any>> = {
   'word_memory': WordMemoryTest,
   'repetitive_writing': RepetitiveWritingTest,
   'dot_connection': DotConnectionTest,
+  'maze_navigation': MazeNavigationTest,
+  'pattern_completion': PatternCompletionTest,
   'word_copy': WordCopyTest,
   'number_copy': NumberCopyTest,
   'sentence_memory': SentenceMemoryTest,

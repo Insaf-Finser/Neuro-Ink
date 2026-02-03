@@ -1,15 +1,25 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { Brain, Target, Clock, Users, ArrowRight, Shield, Zap } from 'lucide-react';
 import { consentService } from '../services/consentService';
+import { useStandalone } from '../hooks/useStandalone';
+import { useDisease } from '../context/DiseaseContext';
 
 const HeroSection = styled.section`
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 100px 0;
   text-align: center;
+
+  @media (max-width: 768px) {
+    padding: 80px 0;
+  }
+
+  @media (max-width: 480px) {
+    padding: 70px 0;
+  }
 `;
 
 const HeroTitle = styled.h1`
@@ -17,6 +27,18 @@ const HeroTitle = styled.h1`
   font-weight: 800;
   margin-bottom: 24px;
   line-height: 1.2;
+
+  @media (max-width: 1024px) {
+    font-size: 2.8rem;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 2.2rem;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 1.9rem;
+  }
 `;
 
 const HeroSubtitle = styled.p`
@@ -26,6 +48,20 @@ const HeroSubtitle = styled.p`
   max-width: 800px;
   margin-left: auto;
   margin-right: auto;
+
+  @media (max-width: 1024px) {
+    font-size: 1.15rem;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1.05rem;
+    margin-bottom: 36px;
+    padding: 0 12px;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 0.98rem;
+  }
 `;
 
 const CTAButton = styled.button`
@@ -150,6 +186,15 @@ const StatLabel = styled.div`
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const isStandalone = useStandalone();
+  const { currentDisease } = useDisease();
+
+  // In the installed PWA, the "home" route should show the selected disease awareness page
+  useEffect(() => {
+    if (isStandalone) {
+      navigate(`/${currentDisease}`, { replace: true });
+    }
+  }, [isStandalone, currentDisease, navigate]);
 
   const handleStartAssessment = async () => {
     setLoading(true);

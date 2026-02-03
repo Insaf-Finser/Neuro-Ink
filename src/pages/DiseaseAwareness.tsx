@@ -7,6 +7,9 @@ import { DiseaseType } from '../context/DiseaseContext';
 import { usePWAManifest } from '../hooks/usePWAManifest';
 import ParkinsonsInstallPrompt from '../components/ParkinsonsInstallPrompt';
 import DiseaseToggle from '../components/DiseaseToggle';
+import { useAuth } from '../context/AuthContext';
+import { consentService } from '../services/consentService';
+import { useStandalone } from '../hooks/useStandalone';
 
 // Disease-specific color schemes (both use same colors now)
 const ALZHEIMERS_COLORS = {
@@ -543,13 +546,31 @@ interface DiseaseAwarenessProps {
 const DiseaseAwareness: React.FC<DiseaseAwarenessProps> = ({ disease }) => {
   const navigate = useNavigate();
   const [showModal, setShowModal] = React.useState(false);
+  const { user } = useAuth();
+  const isStandalone = useStandalone();
   
   // Load appropriate manifest based on disease
   usePWAManifest(disease);
 
-  const handlePerformTest = () => {
+  const handlePerformTest = async () => {
     if (disease === 'alzheimers') {
-      navigate('/alzheimers/dashboard');
+      const targetPath = '/alzheimers/tasks';
+
+      // Require sign-in before proceeding
+      if (!user) {
+        navigate('/login', { state: { from: targetPath } });
+        return;
+      }
+
+      // Require consent before entering PWA-required routes
+      const hasConsent = consentService.isConsentAcceptedSync();
+      if (!hasConsent) {
+        navigate('/consent', { state: { from: targetPath } });
+        return;
+      }
+
+      // User is signed in and consented; navigate into PWA-gated tasks flow
+      navigate(targetPath);
     } else {
       // Parkinson's - show coming soon modal
       setShowModal(true);
@@ -597,9 +618,11 @@ const DiseaseAwareness: React.FC<DiseaseAwarenessProps> = ({ disease }) => {
     <>
       <AwarenessContainer $isAlzheimers={isAlzheimers}>
         <div className="container">
-          <ToggleWrapper>
-            <DiseaseToggle variant="page" />
-          </ToggleWrapper>
+          {!isStandalone && (
+            <ToggleWrapper>
+              <DiseaseToggle variant="page" />
+            </ToggleWrapper>
+          )}
 
           {/* Hero Section */}
           <HeroSection $isAlzheimers={isAlzheimers}>

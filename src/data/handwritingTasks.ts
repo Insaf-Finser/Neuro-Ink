@@ -212,7 +212,8 @@ export const HANDWRITING_TASKS: HandwritingTask[] = [
 
   // SPATIAL TASKS (Spatial Processing & Executive Function)
   {
-    id: 'clock_drawing',
+    // NOTE: uses dash to match router + test mapping (`/test/clock-drawing`)
+    id: 'clock-drawing',
     name: 'Clock Drawing',
     category: 'spatial',
     description: 'Draw a clock showing 10:10',

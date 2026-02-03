@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { Activity, Brain, ClipboardList, Home, Shield, LogOut, User } from 'lucide-react';
 import InstallPrompt from './InstallPrompt';
-import DiseaseToggle from './DiseaseToggle';
 import { useStandalone } from '../hooks/useStandalone';
 import { useAuth } from '../context/AuthContext';
 import { useDisease } from '../context/DiseaseContext';
@@ -552,7 +551,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Determine if navbar should be shown
   // Hide navbar if consent is not accepted (unless on public pages like home, welcome, consent, login, signup)
-  const publicPages = ['/', '/welcome', '/consent', '/login', '/signup', '/about', '/contact'];
+  // Include disease awareness routes so they also show logo and auth controls
+  const publicPages = [
+    '/',
+    '/welcome',
+    '/consent',
+    '/login',
+    '/signup',
+    '/about',
+    '/contact',
+    '/alzheimers',
+    '/parkinsons',
+  ];
   const isPublicPage = publicPages.includes(location.pathname);
   const shouldShowNavbar = consentAccepted === true || isPublicPage || consentLoading;
   
@@ -621,16 +631,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   if (requiresPWA && !isStandalone) {
     return (
       <AppShell>
-          <TopBar $transparent={isHomePage}>
-            <TitleBlock>
-              <Brain size={32} />
-              <Title>
-                <AppName>NeuroInk</AppName>
-                <Tagline>Install to continue</Tagline>
-              </Title>
-            </TitleBlock>
-            {/* Show disease toggle in website mode (not standalone/PWA) */}
-            {!isStandalone && <DiseaseToggle />}
+        <TopBar $transparent={isHomePage}>
+            <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <TitleBlock>
+                <Brain size={32} />
+                <Title>
+                  <AppName>NeuroInk</AppName>
+                  <Tagline>Install to continue</Tagline>
+                </Title>
+              </TitleBlock>
+            </Link>
             <UserMenu>
             {user ? (
               <>
@@ -674,13 +684,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {isHomePage ? (
           // On home page, show overlay without navbar background
           <HomeOverlay>
-            <TitleBlock>
-              <Brain size={32} />
-              <Title>
-                <AppName>NeuroInk</AppName>
-                <Tagline>AI-powered cognitive screening</Tagline>
-              </Title>
-            </TitleBlock>
+            <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <TitleBlock>
+                <Brain size={32} />
+                <Title>
+                  <AppName>NeuroInk</AppName>
+                  <Tagline>AI-powered cognitive screening</Tagline>
+                </Title>
+              </TitleBlock>
+            </Link>
             <UserMenu>
               {user ? (
                 <>
@@ -705,15 +717,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           // On other pages, show normal navbar
           shouldShowNavbar && (
             <TopBar $transparent={isHomePage}>
-              <TitleBlock>
-                <Brain size={32} />
-                <Title>
-                  <AppName>NeuroInk</AppName>
-                  <Tagline>AI-powered cognitive screening</Tagline>
-                </Title>
-              </TitleBlock>
-              {/* Show disease toggle in website mode (not standalone/PWA) */}
-              {!isStandalone && <DiseaseToggle />}
+              <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <TitleBlock>
+                  <Brain size={32} />
+                  <Title>
+                    <AppName>NeuroInk</AppName>
+                    <Tagline>AI-powered cognitive screening</Tagline>
+                  </Title>
+                </TitleBlock>
+              </Link>
               <UserMenu>
                 {user ? (
                   <>

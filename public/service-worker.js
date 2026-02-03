@@ -1,4 +1,4 @@
-const CACHE_NAME = 'my-app-cache-v1';
+const CACHE_NAME = 'my-app-cache-v3';
 const urlsToCache = [
     '/',
     '/index.html',
@@ -69,31 +69,57 @@ self.addEventListener('fetch', (event) => {
     }
 
     // Handle other requests (assets, API calls, etc.)
-    event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                // Return cached response if found
-                if (response) {
+    const url = new URL(event.request.url);
+    const isJSorCSS = url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || 
+                      url.pathname.includes('/static/');
+    
+    if (isJSorCSS) {
+        // Network-first strategy for JS/CSS to ensure fresh code
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    // Cache successful responses
+                    if (response && response.status === 200) {
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        });
+                    }
                     return response;
-                }
-                // Otherwise fetch from network
-                return fetch(event.request)
-                    .then((response) => {
-                        // Cache successful responses
-                        if (response && response.status === 200) {
-                            const responseToCache = response.clone();
-                            caches.open(CACHE_NAME).then((cache) => {
-                                cache.put(event.request, responseToCache);
-                            });
-                        }
+                })
+                .catch(() => {
+                    // Fallback to cache if network fails
+                    return caches.match(event.request);
+                })
+        );
+    } else {
+        // Cache-first strategy for other assets
+        event.respondWith(
+            caches.match(event.request)
+                .then((response) => {
+                    // Return cached response if found
+                    if (response) {
                         return response;
-                    })
-                    .catch(() => {
-                        // Return cached version if available, or undefined
-                        return caches.match(event.request);
-                    });
-            })
-    );
+                    }
+                    // Otherwise fetch from network
+                    return fetch(event.request)
+                        .then((response) => {
+                            // Cache successful responses
+                            if (response && response.status === 200) {
+                                const responseToCache = response.clone();
+                                caches.open(CACHE_NAME).then((cache) => {
+                                    cache.put(event.request, responseToCache);
+                                });
+                            }
+                            return response;
+                        })
+                        .catch(() => {
+                            // Return cached version if available, or undefined
+                            return caches.match(event.request);
+                        });
+                })
+        );
+    }
 });
 
 //activate
@@ -109,7 +135,9 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             ))
+            .then(() => {
+                // Take control of all pages immediately
+                return self.clients.claim();
+            })
     );
-    // Take control of all pages immediately
-    return self.clients.claim();
 });

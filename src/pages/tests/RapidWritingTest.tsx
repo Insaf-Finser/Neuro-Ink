@@ -5,6 +5,10 @@ import { RotateCcw, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
+import TestResultsDisplay from '../../components/TestResultsDisplay';
+import { analyzeTest } from '../../services/testAnalysisService';
+import { AIAnalysisResult } from '../../services/aiAnalysisService';
+import useTaskCompletion from '../../hooks/useTaskCompletion';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -128,13 +132,21 @@ const PauseOverlay = styled.div`
 `;
 
 const RapidWritingTest: React.FC = () => {
+  // Version identifier to verify updated code is loaded
+  useEffect(() => {
+    console.log('[RapidWritingTest] v2.0 - AI Integration Enabled');
+  }, []);
+
   const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-const [timeElapsed, setTimeElapsed] = useState(0);
+  const [timeElapsed, setTimeElapsed] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(30);
+  const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { completeTaskAndNavigate, isCompleting } = useTaskCompletion();
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -159,7 +171,8 @@ return 0;
     if (timeRemaining === 0 && hasStarted) {
       // Task completed - timer ran out
       setIsDrawing(false);
-}
+      evaluateDrawing();
+    }
   }, [timeRemaining, hasStarted]);
 
   const handleCanvasTap = () => {
@@ -175,7 +188,7 @@ return 0;
   };
 
   const handleStrokeEnd = () => {
-        setIsDrawing(false);
+    setIsDrawing(false);
   };
 
   const clearCanvas = () => {
@@ -209,17 +222,74 @@ return 0;
     </Instructions>
   );
 
+  const evaluateDrawing = async () => {
+    const rawStrokes = canvasRef.current?.getAllStrokes() || [];
+    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
+    if (!rawStrokes.length || canvasSize.width === 0 || canvasSize.height === 0) {
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const totalTimeMs = Math.max(1, timeElapsed * 1000);
+      const cognitiveScore = 100;
+      const analysis = analyzeTest('rapidWriting', rawStrokes, canvasSize, totalTimeMs, cognitiveScore);
+      setAiResult(analysis.aiResult);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleNext = async () => {
+    const rawStrokes = canvasRef.current?.getAllStrokes() || [];
+    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
+
+    if (!rawStrokes.length || canvasSize.width === 0 || canvasSize.height === 0) {
+      navigate('/test/comprehensive_assessment');
+      return;
+    }
+
+    const strokes = rawStrokes.map(stroke => ({
+      points: stroke.map(p => ({
+        x: p.x,
+        y: p.y,
+        pressure: p.pressure ?? 0,
+        timestamp: p.timestamp ?? 0,
+        tiltX: p.tiltX,
+        tiltY: p.tiltY,
+        rotation: p.rotation,
+      })),
+      startTime: stroke[0]?.timestamp ?? 0,
+      endTime: stroke[stroke.length - 1]?.timestamp ?? 0,
+    }));
+
+    await completeTaskAndNavigate(
+      {
+        taskId: 'rapid_writing',
+        elapsedTime: timeElapsed,
+        strokes,
+        canvasSize,
+        userInteractions: {
+          pauseCount: 0,
+          clearCount: 0,
+          undoCount: 0,
+        },
+      },
+      'comprehensive_assessment'
+    );
+  };
+
   return (
     <Container>
       <TestHarness
         title="Rapid Writing Test"
-        step={ 19 }
+        step={19}
         totalSteps={21}
         instructions={instructions}
         isComplete={timeRemaining === 0 && hasStarted}
         onRetry={clearCanvas}
-        onNext={() => navigate('/test/comprehensive_assessment')}
-        canProceed={timeRemaining === 0 && hasStarted}
+        onNext={handleNext}
+        canProceed={timeRemaining === 0 && hasStarted && !isAnalyzing && !isCompleting}
       >
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? (
@@ -259,6 +329,18 @@ return 0;
             </PauseOverlay>
           )}
         </div>
+
+        {aiResult && (
+          <div style={{ marginTop: 16 }}>
+            <TestResultsDisplay validation={undefined} aiResult={aiResult} />
+          </div>
+        )}
+
+        {isAnalyzing && (
+          <div style={{ textAlign: 'center', color: '#6b7280', marginTop: 8 }}>
+            Analyzing rapid writing...
+          </div>
+        )}
 
         {hasStarted && (
           <Controls>

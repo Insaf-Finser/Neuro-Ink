@@ -5,6 +5,10 @@ import { RotateCcw, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
+import TestResultsDisplay from '../../components/TestResultsDisplay';
+import { analyzeTest } from '../../services/testAnalysisService';
+import { AIAnalysisResult } from '../../services/aiAnalysisService';
+import useTaskCompletion from '../../hooks/useTaskCompletion';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -133,8 +137,11 @@ const ClockDrawingTest: React.FC = () => {
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-const [timeElapsed, setTimeElapsed] = useState(0);
+  const [timeElapsed, setTimeElapsed] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(180);
+  const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { completeTaskAndNavigate, isCompleting } = useTaskCompletion();
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -159,7 +166,9 @@ return 0;
     if (timeRemaining === 0 && hasStarted) {
       // Task completed - timer ran out
       setIsDrawing(false);
-}
+      // Run analysis once time is up
+      evaluateDrawing();
+    }
   }, [timeRemaining, hasStarted]);
 
   const handleCanvasTap = () => {
@@ -175,7 +184,7 @@ return 0;
   };
 
   const handleStrokeEnd = () => {
-        setIsDrawing(false);
+    setIsDrawing(false);
   };
 
   const clearCanvas = () => {
@@ -209,17 +218,75 @@ return 0;
     </Instructions>
   );
 
+  const evaluateDrawing = async () => {
+    const strokes = canvasRef.current?.getAllStrokes() || [];
+    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
+    if (!strokes.length || canvasSize.width === 0 || canvasSize.height === 0) {
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const totalTimeMs = Math.max(1, timeElapsed * 1000);
+      // For now, use a simple completeness score placeholder (100 when finished)
+      const cognitiveScore = 100;
+      const analysis = analyzeTest('clockDrawing', strokes, canvasSize, totalTimeMs, cognitiveScore);
+      setAiResult(analysis.aiResult);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleNext = async () => {
+    const rawStrokes = canvasRef.current?.getAllStrokes() || [];
+    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
+
+    if (!rawStrokes.length || canvasSize.width === 0 || canvasSize.height === 0) {
+      navigate('/test/dot_connection');
+      return;
+    }
+
+    const strokes = rawStrokes.map(stroke => ({
+      points: stroke.map(p => ({
+        x: p.x,
+        y: p.y,
+        pressure: p.pressure ?? 0,
+        timestamp: p.timestamp ?? 0,
+        tiltX: p.tiltX,
+        tiltY: p.tiltY,
+        rotation: p.rotation,
+      })),
+      startTime: stroke[0]?.timestamp ?? 0,
+      endTime: stroke[stroke.length - 1]?.timestamp ?? 0,
+    }));
+
+    await completeTaskAndNavigate(
+      {
+        taskId: 'clock-drawing',
+        elapsedTime: timeElapsed,
+        strokes,
+        canvasSize,
+        userInteractions: {
+          pauseCount: 0,
+          clearCount: 0,
+          undoCount: 0,
+        },
+      },
+      'dot_connection'
+    );
+  };
+
   return (
     <Container>
       <TestHarness
         title="Clock Drawing Test"
-        step={ 15 }
+        step={15}
         totalSteps={21}
         instructions={instructions}
         isComplete={timeRemaining === 0 && hasStarted}
         onRetry={clearCanvas}
-        onNext={() => navigate('/test/dot_connection')}
-        canProceed={timeRemaining === 0 && hasStarted}
+        onNext={handleNext}
+        canProceed={timeRemaining === 0 && hasStarted && !isAnalyzing && !isCompleting}
       >
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? (
@@ -259,6 +326,18 @@ return 0;
             </PauseOverlay>
           )}
         </div>
+
+        {aiResult && (
+          <div style={{ marginTop: 16 }}>
+            <TestResultsDisplay validation={undefined} aiResult={aiResult} />
+          </div>
+        )}
+
+        {isAnalyzing && (
+          <div style={{ textAlign: 'center', color: '#6b7280', marginTop: 8 }}>
+            Analyzing clock drawing...
+          </div>
+        )}
 
         {hasStarted && (
           <Controls>

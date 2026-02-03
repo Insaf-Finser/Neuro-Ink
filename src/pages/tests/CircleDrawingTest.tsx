@@ -10,6 +10,7 @@ import { analyzeTest } from '../../services/testAnalysisService';
 import TestResultsDisplay from '../../components/TestResultsDisplay';
 import { AIAnalysisResult } from '../../services/aiAnalysisService';
 import { saveTestResult } from '../../services/resultsStorageService';
+import useTaskCompletion from '../../hooks/useTaskCompletion';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -135,6 +136,7 @@ const PauseOverlay = styled.div`
 const CircleDrawingTest: React.FC = () => {
   const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
+  const { completeTaskAndNavigate, isCompleting } = useTaskCompletion();
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
@@ -252,6 +254,45 @@ const CircleDrawingTest: React.FC = () => {
     </Instructions>
   );
 
+  const handleNext = async () => {
+    const rawStrokes = canvasRef.current?.getAllStrokes() || [];
+    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
+
+    if (!rawStrokes.length || canvasSize.width === 0 || canvasSize.height === 0) {
+      navigate('/test/square_drawing');
+      return;
+    }
+
+    const strokes = rawStrokes.map(stroke => ({
+      points: stroke.map(p => ({
+        x: p.x,
+        y: p.y,
+        pressure: p.pressure ?? 0,
+        timestamp: p.timestamp ?? 0,
+        tiltX: p.tiltX,
+        tiltY: p.tiltY,
+        rotation: p.rotation,
+      })),
+      startTime: stroke[0]?.timestamp ?? 0,
+      endTime: stroke[stroke.length - 1]?.timestamp ?? 0,
+    }));
+
+    await completeTaskAndNavigate(
+      {
+        taskId: 'circle_drawing',
+        elapsedTime: timeElapsed,
+        strokes,
+        canvasSize,
+        userInteractions: {
+          pauseCount: 0,
+          clearCount: 0,
+          undoCount: 0,
+        },
+      },
+      'square_drawing'
+    );
+  };
+
   return (
     <Container>
       <TestHarness
@@ -261,8 +302,8 @@ const CircleDrawingTest: React.FC = () => {
         instructions={instructions}
         isComplete={timeRemaining === 0 && hasStarted}
         onRetry={clearCanvas}
-        onNext={() => navigate('/test/square_drawing')}
-        canProceed={timeRemaining === 0 && hasStarted}
+        onNext={handleNext}
+        canProceed={timeRemaining === 0 && hasStarted && !isAnalyzing && !isCompleting}
       >
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? (

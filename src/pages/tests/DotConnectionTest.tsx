@@ -5,6 +5,10 @@ import { RotateCcw, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
+import TestResultsDisplay from '../../components/TestResultsDisplay';
+import { analyzeTest } from '../../services/testAnalysisService';
+import { AIAnalysisResult } from '../../services/aiAnalysisService';
+import useTaskCompletion from '../../hooks/useTaskCompletion';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -127,14 +131,42 @@ const PauseOverlay = styled.div`
   pointer-events: none;
 `;
 
+const DotOverlayContainer = styled.div`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+`;
+
+const DotLabel = styled.div<{ $top: number; $left: number }>`
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #667eea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1f2933;
+  transform: translate(-50%, -50%);
+  top: ${props => props.$top}%;
+  left: ${props => props.$left}%;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+`;
+
 const DotConnectionTest: React.FC = () => {
   const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-const [timeElapsed, setTimeElapsed] = useState(0);
+  const [timeElapsed, setTimeElapsed] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(60);
+  const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { completeTaskAndNavigate, isCompleting } = useTaskCompletion();
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -159,7 +191,8 @@ return 0;
     if (timeRemaining === 0 && hasStarted) {
       // Task completed - timer ran out
       setIsDrawing(false);
-}
+      evaluateDrawing();
+    }
   }, [timeRemaining, hasStarted]);
 
   const handleCanvasTap = () => {
@@ -175,7 +208,7 @@ return 0;
   };
 
   const handleStrokeEnd = () => {
-        setIsDrawing(false);
+    setIsDrawing(false);
   };
 
   const clearCanvas = () => {
@@ -209,17 +242,75 @@ return 0;
     </Instructions>
   );
 
+  const evaluateDrawing = async () => {
+    const strokes = canvasRef.current?.getAllStrokes() || [];
+    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
+    if (!strokes.length || canvasSize.width === 0 || canvasSize.height === 0) {
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const totalTimeMs = Math.max(1, timeElapsed * 1000);
+      // Placeholder cognitive score; can be refined with dot-order logic later
+      const cognitiveScore = 100;
+      const analysis = analyzeTest('dotConnection', strokes, canvasSize, totalTimeMs, cognitiveScore);
+      setAiResult(analysis.aiResult);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleNext = async () => {
+    const rawStrokes = canvasRef.current?.getAllStrokes() || [];
+    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
+
+    if (!rawStrokes.length || canvasSize.width === 0 || canvasSize.height === 0) {
+      navigate('/test/repetitive_writing');
+      return;
+    }
+
+    const strokes = rawStrokes.map(stroke => ({
+      points: stroke.map(p => ({
+        x: p.x,
+        y: p.y,
+        pressure: p.pressure ?? 0,
+        timestamp: p.timestamp ?? 0,
+        tiltX: p.tiltX,
+        tiltY: p.tiltY,
+        rotation: p.rotation,
+      })),
+      startTime: stroke[0]?.timestamp ?? 0,
+      endTime: stroke[stroke.length - 1]?.timestamp ?? 0,
+    }));
+
+    await completeTaskAndNavigate(
+      {
+        taskId: 'dot_connection',
+        elapsedTime: timeElapsed,
+        strokes,
+        canvasSize,
+        userInteractions: {
+          pauseCount: 0,
+          clearCount: 0,
+          undoCount: 0,
+        },
+      },
+      'repetitive_writing'
+    );
+  };
+
   return (
     <Container>
       <TestHarness
         title="Dot Connection Test"
-        step={ 16 }
+        step={16}
         totalSteps={21}
         instructions={instructions}
         isComplete={timeRemaining === 0 && hasStarted}
         onRetry={clearCanvas}
-        onNext={() => navigate('/test/repetitive_writing')}
-        canProceed={timeRemaining === 0 && hasStarted}
+        onNext={handleNext}
+        canProceed={timeRemaining === 0 && hasStarted && !isAnalyzing && !isCompleting}
       >
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? (
@@ -245,6 +336,26 @@ return 0;
         )}
 
         <div style={{ position: 'relative' }}>
+          {/* Numbered dots 1–10 so the task is visually correct */}
+          <DotOverlayContainer>
+            {[
+              { n: 1, top: 20, left: 20 },
+              { n: 2, top: 20, left: 40 },
+              { n: 3, top: 20, left: 60 },
+              { n: 4, top: 20, left: 80 },
+              { n: 5, top: 40, left: 80 },
+              { n: 6, top: 60, left: 80 },
+              { n: 7, top: 80, left: 80 },
+              { n: 8, top: 80, left: 60 },
+              { n: 9, top: 80, left: 40 },
+              { n: 10, top: 80, left: 20 },
+            ].map(dot => (
+              <DotLabel key={dot.n} $top={dot.top} $left={dot.left}>
+                {dot.n}
+              </DotLabel>
+            ))}
+          </DotOverlayContainer>
+
           <DrawingCanvas
             ref={canvasRef}
             disabled={!hasStarted}
@@ -259,6 +370,18 @@ return 0;
             </PauseOverlay>
           )}
         </div>
+
+        {aiResult && (
+          <div style={{ marginTop: 16 }}>
+            <TestResultsDisplay validation={undefined} aiResult={aiResult} />
+          </div>
+        )}
+
+        {isAnalyzing && (
+          <div style={{ textAlign: 'center', color: '#6b7280', marginTop: 8 }}>
+            Analyzing dot connection...
+          </div>
+        )}
 
         {hasStarted && (
           <Controls>
