@@ -6,6 +6,8 @@ import { enhancedAIAnalysisService, EnhancedAIAnalysisResult } from './enhancedA
 import { AnalysisServiceFactory } from './analysis/AnalysisServiceFactory';
 import { getTasksForDisease } from '../data/handwritingTasks';
 import { DiseaseType } from '../context/DiseaseContext';
+import { saveTestResult } from './resultsStorageService';
+import { getTestNameFromTaskId } from '../utils/testTaskMapping';
 
 export interface TaskCompletionData {
   taskId: string;
@@ -37,7 +39,7 @@ export interface TaskCompletionResult {
 class TaskCompletionService {
   private readonly AI_ANALYSIS_ENABLED = true;
   private readonly MIN_STROKES_FOR_ANALYSIS = 3;
-  private readonly MIN_DRAWING_TIME = 1000; // 1 second minimum
+  private readonly MIN_DRAWING_TIME = 1; // 1 second minimum (elapsedTime is in seconds)
 
   /**
    * Complete a handwriting task with full data saving and AI analysis
@@ -113,6 +115,43 @@ class TaskCompletionService {
 
       // Save to session storage
       await sessionStorageService.markTaskCompleted(completionData.taskId, sessionData);
+
+      // Also save to Firestore via resultsStorageService
+      try {
+        const testName = getTestNameFromTaskId(completionData.taskId) || completionData.taskId;
+        await saveTestResult(
+          {
+            testName,
+            taskId: completionData.taskId,
+            durationMs: completionData.elapsedTime * 1000, // elapsedTime is in seconds, convert to milliseconds
+            validation: undefined,
+            aiResult: aiAnalysis ? {
+              overallRisk: 'overallRisk' in aiAnalysis ? aiAnalysis.overallRisk : (aiAnalysis.darwinRiskLevel || 'low'),
+              probability: 'probability' in aiAnalysis ? aiAnalysis.probability : (aiAnalysis.darwinPrediction || 0.5),
+              testScores: 'testScores' in aiAnalysis ? aiAnalysis.testScores : {
+                clockDrawing: 0.8,
+                wordRecall: 0.8,
+                imageAssociation: 0.8,
+                selectionMemory: 0.8
+              },
+              biomarkers: 'biomarkers' in aiAnalysis ? aiAnalysis.biomarkers : {
+                pressure: aiAnalysis.pressure || 0.5,
+                spatialAccuracy: aiAnalysis.spatialAccuracy || 0.5,
+                temporalConsistency: aiAnalysis.temporalConsistency || 0.5,
+                cognitiveLoad: aiAnalysis.cognitiveLoad || 0.5
+              },
+              recommendations: 'recommendations' in aiAnalysis ? aiAnalysis.recommendations : []
+            } : undefined,
+            features: this.extractFeatureNames(completionData)
+          },
+          undefined, // userId will be determined by saveTestResult
+          'alzheimers' // Default to alzheimers for now
+        );
+        console.log(`Test result saved to Firestore for task: ${completionData.taskId}`);
+      } catch (error) {
+        console.error('Error saving test result to Firestore:', error);
+        // Don't fail the entire completion if Firestore save fails
+      }
 
       // Generate session ID
       const sessionId = `task_${completionData.taskId}_${Date.now()}`;

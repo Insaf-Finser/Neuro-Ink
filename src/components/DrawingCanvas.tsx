@@ -47,6 +47,8 @@ const Canvas = styled.canvas`
   -webkit-user-select: none;
   user-select: none;
   box-sizing: border-box;
+  position: relative;
+  z-index: 1;
 `;
 
 const ReferenceCanvas = styled.canvas`

@@ -135,6 +135,7 @@ const DotOverlayContainer = styled.div`
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 2;
 `;
 
 const DotLabel = styled.div<{ $top: number; $left: number }>`
@@ -157,6 +158,11 @@ const DotLabel = styled.div<{ $top: number; $left: number }>`
 `;
 
 const DotConnectionTest: React.FC = () => {
+  // Version identifier to verify updated code is loaded
+  useEffect(() => {
+    console.log('[DotConnectionTest] v2.0 - AI Integration Enabled');
+  }, []);
+
   const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
   
@@ -266,7 +272,7 @@ return 0;
     const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
 
     if (!rawStrokes.length || canvasSize.width === 0 || canvasSize.height === 0) {
-      navigate('/test/repetitive_writing');
+      navigate('/test/maze_navigation');
       return;
     }
 
@@ -296,7 +302,7 @@ return 0;
           undoCount: 0,
         },
       },
-      'repetitive_writing'
+      'maze_navigation'
     );
   };
 

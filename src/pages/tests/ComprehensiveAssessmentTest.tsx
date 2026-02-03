@@ -17,6 +17,7 @@ const ReferenceOverlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 2;
 `;
 
 const ReferenceCanvas = styled.div`
@@ -428,6 +429,14 @@ return 0;
         )}
 
         <div style={{ position: 'relative' }}>
+          <DrawingCanvas
+            ref={canvasRef}
+            disabled={!hasStarted}
+            placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Draw here...') : 'Tap canvas to start test'}
+            onTap={handleCanvasTap}
+            onStrokeStart={handleStrokeStart}
+            onStrokeEnd={handleStrokeEnd}
+          />
           {/* Reference layout to show where each element should roughly go */}
           <ReferenceOverlay>
             <ReferenceCanvas>
@@ -452,15 +461,6 @@ return 0;
               </RefCell>
             </ReferenceCanvas>
           </ReferenceOverlay>
-
-          <DrawingCanvas
-            ref={canvasRef}
-            disabled={!hasStarted}
-            placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Draw here...') : 'Tap canvas to start test'}
-            onTap={handleCanvasTap}
-            onStrokeStart={handleStrokeStart}
-            onStrokeEnd={handleStrokeEnd}
-          />
           {timeRemaining === 0 && hasStarted && (
             <PauseOverlay style={{ background: 'rgba(16, 185, 129, 0.9)' }}>
               ✓ Test Completed

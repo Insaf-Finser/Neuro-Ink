@@ -120,6 +120,7 @@ const MazeOverlay = styled.div`
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 2;
 `;
 
 const MazeWall = styled.div<{ $top: number; $left: number; $width: number; $height: number }>`
@@ -147,6 +148,11 @@ const MazeLabel = styled.div<{ $top: number; $left: number }>`
 `;
 
 const MazeNavigationTest: React.FC = () => {
+  // Version identifier to verify updated code is loaded
+  useEffect(() => {
+    console.log('[MazeNavigationTest] v2.0 - AI Integration Enabled');
+  }, []);
+
   const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
 
@@ -327,6 +333,14 @@ const MazeNavigationTest: React.FC = () => {
         )}
 
         <div style={{ position: 'relative' }}>
+          <DrawingCanvas
+            ref={canvasRef}
+            disabled={!hasStarted}
+            placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Navigate the maze here...') : 'Tap canvas to start test'}
+            onTap={handleCanvasTap}
+            onStrokeStart={handleStrokeStart}
+            onStrokeEnd={handleStrokeEnd}
+          />
           <MazeOverlay>
             {/* Simple rectangular maze layout, proportional to canvas */}
             {/* Outer walls */}
@@ -344,15 +358,6 @@ const MazeNavigationTest: React.FC = () => {
             <MazeLabel $top={90} $left={12}>S</MazeLabel>
             <MazeLabel $top={12} $left={88}>E</MazeLabel>
           </MazeOverlay>
-
-          <DrawingCanvas
-            ref={canvasRef}
-            disabled={!hasStarted}
-            placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Navigate the maze here...') : 'Tap canvas to start test'}
-            onTap={handleCanvasTap}
-            onStrokeStart={handleStrokeStart}
-            onStrokeEnd={handleStrokeEnd}
-          />
         </div>
 
         {aiResult && (

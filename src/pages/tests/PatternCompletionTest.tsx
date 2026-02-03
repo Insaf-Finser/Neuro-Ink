@@ -123,6 +123,7 @@ const PatternOverlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 2;
 `;
 
 const PatternCanvas = styled.div`
@@ -157,6 +158,11 @@ const DottedBox = styled(PatternBox)`
 `;
 
 const PatternCompletionTest: React.FC = () => {
+  // Version identifier to verify updated code is loaded
+  useEffect(() => {
+    console.log('[PatternCompletionTest] v2.0 - AI Integration Enabled');
+  }, []);
+
   const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
 
@@ -337,6 +343,14 @@ const PatternCompletionTest: React.FC = () => {
         )}
 
         <div style={{ position: 'relative' }}>
+          <DrawingCanvas
+            ref={canvasRef}
+            disabled={!hasStarted}
+            placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Complete the pattern here...') : 'Tap canvas to start test'}
+            onTap={handleCanvasTap}
+            onStrokeStart={handleStrokeStart}
+            onStrokeEnd={handleStrokeEnd}
+          />
           {/* Reference pattern: filled/empty boxes, last in dashed box to show where to continue */}
           <PatternOverlay>
             <PatternCanvas>
@@ -357,15 +371,6 @@ const PatternCompletionTest: React.FC = () => {
               </PatternCell>
             </PatternCanvas>
           </PatternOverlay>
-
-          <DrawingCanvas
-            ref={canvasRef}
-            disabled={!hasStarted}
-            placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Complete the pattern here...') : 'Tap canvas to start test'}
-            onTap={handleCanvasTap}
-            onStrokeStart={handleStrokeStart}
-            onStrokeEnd={handleStrokeEnd}
-          />
         </div>
 
         {aiResult && (

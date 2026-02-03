@@ -131,7 +131,132 @@ const PauseOverlay = styled.div`
   pointer-events: none;
 `;
 
+const ClockOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const ClockReference = styled.div`
+  width: 300px;
+  height: 300px;
+  border: 3px solid rgba(102, 126, 234, 0.6);
+  border-radius: 50%;
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  
+  @media (max-width: 768px) {
+    width: 250px;
+    height: 250px;
+  }
+  
+  @media (max-width: 480px) {
+    width: 200px;
+    height: 200px;
+  }
+`;
+
+const CenterLine = styled.div`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 80%;
+  background: rgba(102, 126, 234, 0.4);
+  
+  @media (max-width: 768px) {
+    height: 75%;
+  }
+  
+  @media (max-width: 480px) {
+    height: 70%;
+  }
+`;
+
+const ClockMarker = styled.div<{ $angle: number }>`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(${props => props.$angle}deg) translateY(-135px) rotate(${props => -props.$angle}deg);
+  width: 3px;
+  height: 20px;
+  background: rgba(102, 126, 234, 0.6);
+  border-radius: 2px;
+  
+  @media (max-width: 768px) {
+    transform: translate(-50%, -50%) rotate(${props => props.$angle}deg) translateY(-113px) rotate(${props => -props.$angle}deg);
+    height: 18px;
+  }
+  
+  @media (max-width: 480px) {
+    transform: translate(-50%, -50%) rotate(${props => props.$angle}deg) translateY(-90px) rotate(${props => -props.$angle}deg);
+    height: 16px;
+    width: 2px;
+  }
+`;
+
+const ClockHands = styled.div`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 4px;
+  background: #667eea;
+  border-radius: 50%;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    width: 3px;
+    height: 60px;
+    background: #667eea;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    transform-origin: bottom center;
+    transform: translateX(-50%) rotate(30deg);
+    border-radius: 2px;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    width: 2px;
+    height: 80px;
+    background: #667eea;
+    top: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+    transform-origin: bottom center;
+    transform: translateX(-50%) rotate(60deg);
+    border-radius: 1px;
+  }
+  
+  @media (max-width: 768px) {
+    &::before {
+      height: 45px;
+      top: -45px;
+    }
+    
+    &::after {
+      height: 60px;
+      top: -60px;
+    }
+  }
+`;
+
 const ClockDrawingTest: React.FC = () => {
+  // Version identifier to verify updated code is loaded
+  useEffect(() => {
+    console.log('[ClockDrawingTest] v2.0 - AI Integration Enabled');
+  }, []);
+
   const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
   
@@ -312,6 +437,16 @@ return 0;
         )}
 
         <div style={{ position: 'relative' }}>
+          <ClockOverlay>
+            <ClockReference>
+              {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((num, idx) => {
+                const angle = (idx * 30) - 90; // Start at top (12 o'clock)
+                return (
+                  <ClockMarker key={num} $angle={angle} />
+                );
+              })}
+            </ClockReference>
+          </ClockOverlay>
           <DrawingCanvas
             ref={canvasRef}
             disabled={!hasStarted}
