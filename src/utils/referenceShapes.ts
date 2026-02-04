@@ -7,7 +7,9 @@ export type ReferenceShapeType =
   | 'pentagon'
   | 'spiral'
   | 'line'
-  | 'dotGrid';
+  | 'dotGrid'
+  | 'maze'
+  | 'patternBoxes';
 
 export interface ReferenceShapeOptions {
   color?: string;
@@ -70,6 +72,12 @@ export function drawReferenceShape(
       break;
     case 'dotGrid':
       drawDotGrid(ctx, width, height);
+      break;
+    case 'maze':
+      drawMaze(ctx, width, height);
+      break;
+    case 'patternBoxes':
+      drawPatternBoxes(ctx, width, height);
       break;
     default:
       break;
@@ -143,6 +151,93 @@ function drawDotGrid(ctx: CanvasRenderingContext2D, width: number, height: numbe
       ctx.fill();
     }
   }
+}
+
+function drawMaze(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  // Helper to draw a rectangular wall using percentage coordinates
+  const wall = (topPct: number, leftPct: number, widthPct: number, heightPct: number) => {
+    const x = (leftPct / 100) * width;
+    const y = (topPct / 100) * height;
+    const w = (widthPct / 100) * width;
+    const h = (heightPct / 100) * height;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 6);
+    ctx.fill();
+  };
+
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+
+  // Outer walls (match the test layout proportions)
+  wall(10, 10, 80, 6);
+  wall(84, 10, 80, 6);
+  wall(16, 10, 6, 68);
+  wall(16, 84, 6, 68);
+
+  // Inner walls
+  wall(30, 20, 60, 4);
+  wall(50, 20, 40, 4);
+  wall(70, 40, 40, 4);
+  wall(30, 20, 4, 30);
+  wall(44, 56, 4, 30);
+
+  // Start (S) and End (E) markers
+  const drawLabel = (text: string, topPct: number, leftPct: number) => {
+    const x = (leftPct / 100) * width;
+    const y = (topPct / 100) * height;
+    const radius = Math.min(width, height) * 0.035;
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.arc(x, y, radius, 0, TWO_PI);
+    ctx.fill();
+
+    ctx.fillStyle = '#111827';
+    ctx.font = `${radius * 1.1}px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y);
+  };
+
+  drawLabel('S', 90, 12);
+  drawLabel('E', 12, 88);
+}
+
+function drawPatternBoxes(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  // Draw a row of 5 boxes: filled, empty, filled, empty, dashed (next)
+  const marginX = width * 0.1;
+  const boxAreaWidth = width - marginX * 2;
+  const boxWidth = boxAreaWidth / 5;
+  const boxHeight = height * 0.25;
+  const y = height * 0.35;
+
+  const drawBox = (index: number, filled: boolean, dashed: boolean) => {
+    const x = marginX + index * boxWidth + boxWidth * 0.1;
+    const w = boxWidth * 0.8;
+    const h = boxHeight;
+
+    ctx.save();
+    ctx.beginPath();
+    if (dashed) {
+      ctx.setLineDash([6, 6]);
+    }
+    ctx.roundRect(x, y, w, h, 8);
+    ctx.stroke();
+
+    if (filled) {
+      ctx.fillStyle = 'rgba(75, 85, 99, 0.9)';
+      ctx.fill();
+    }
+    ctx.restore();
+  };
+
+  // Outline color
+  ctx.strokeStyle = 'rgba(75, 85, 99, 0.9)';
+  ctx.lineWidth = 2;
+
+  drawBox(0, true, false);
+  drawBox(1, false, false);
+  drawBox(2, true, false);
+  drawBox(3, false, false);
+  drawBox(4, false, true);
 }
 
 export function sizeReferenceCanvas(

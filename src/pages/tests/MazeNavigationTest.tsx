@@ -116,36 +116,7 @@ const TimerText = styled.div`
   color: #667eea;
 `;
 
-const MazeOverlay = styled.div`
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 2;
-`;
-
-const MazeWall = styled.div<{ $top: number; $left: number; $width: number; $height: number }>`
-  position: absolute;
-  background: rgba(15, 23, 42, 0.35);
-  border-radius: 6px;
-  top: ${p => p.$top}%;
-  left: ${p => p.$left}%;
-  width: ${p => p.$width}%;
-  height: ${p => p.$height}%;
-`;
-
-const MazeLabel = styled.div<{ $top: number; $left: number }>`
-  position: absolute;
-  transform: translate(-50%, -50%);
-  top: ${p => p.$top}%;
-  left: ${p => p.$left}%;
-  background: rgba(255, 255, 255, 0.95);
-  color: #111827;
-  border-radius: 999px;
-  padding: 4px 8px;
-  font-size: 12px;
-  font-weight: 700;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
-`;
+// (Maze reference is now drawn inside the canvas via DrawingCanvas.referenceShape)
 
 const MazeNavigationTest: React.FC = () => {
   // Version identifier to verify updated code is loaded
@@ -340,24 +311,15 @@ const MazeNavigationTest: React.FC = () => {
             onTap={handleCanvasTap}
             onStrokeStart={handleStrokeStart}
             onStrokeEnd={handleStrokeEnd}
+            referenceShape={{
+              type: 'maze',
+              options: {
+                color: 'rgba(15, 23, 42, 0.45)',
+                lineWidth: 4,
+                opacity: 0.6
+              }
+            }}
           />
-          <MazeOverlay>
-            {/* Simple rectangular maze layout, proportional to canvas */}
-            {/* Outer walls */}
-            <MazeWall $top={10} $left={10} $width={80} $height={6} />
-            <MazeWall $top={84} $left={10} $width={80} $height={6} />
-            <MazeWall $top={16} $left={10} $width={6} $height={68} />
-            <MazeWall $top={16} $left={84} $width={6} $height={68} />
-            {/* Inner walls */}
-            <MazeWall $top={30} $left={20} $width={60} $height={4} />
-            <MazeWall $top={50} $left={20} $width={40} $height={4} />
-            <MazeWall $top={70} $left={40} $width={40} $height={4} />
-            <MazeWall $top={30} $left={20} $width={4} $height={30} />
-            <MazeWall $top={44} $left={56} $width={4} $height={30} />
-
-            <MazeLabel $top={90} $left={12}>S</MazeLabel>
-            <MazeLabel $top={12} $left={88}>E</MazeLabel>
-          </MazeOverlay>
         </div>
 
         {aiResult && (

@@ -116,46 +116,7 @@ const TimerText = styled.div`
   color: #667eea;
 `;
 
-const PatternOverlay = styled.div`
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-`;
-
-const PatternCanvas = styled.div`
-  width: 80%;
-  max-width: 500px;
-  height: 40%;
-  max-height: 240px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-`;
-
-const PatternCell = styled.div`
-  flex: 1;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const PatternBox = styled.div<{ $filled?: boolean }>`
-  width: 60%;
-  height: 40%;
-  border-radius: 8px;
-  border: 2px solid #4b5563;
-  background: ${p => (p.$filled ? '#4b5563' : 'transparent')};
-`;
-
-const DottedBox = styled(PatternBox)`
-  border-style: dashed;
-  opacity: 0.8;
-`;
+// (Pattern reference is now drawn inside the canvas via DrawingCanvas.referenceShape)
 
 const PatternCompletionTest: React.FC = () => {
   // Version identifier to verify updated code is loaded
@@ -350,27 +311,15 @@ const PatternCompletionTest: React.FC = () => {
             onTap={handleCanvasTap}
             onStrokeStart={handleStrokeStart}
             onStrokeEnd={handleStrokeEnd}
+            referenceShape={{
+              type: 'patternBoxes',
+              options: {
+                color: 'rgba(75, 85, 99, 0.9)',
+                lineWidth: 2,
+                opacity: 0.9
+              }
+            }}
           />
-          {/* Reference pattern: filled/empty boxes, last in dashed box to show where to continue */}
-          <PatternOverlay>
-            <PatternCanvas>
-              <PatternCell>
-                <PatternBox $filled />
-              </PatternCell>
-              <PatternCell>
-                <PatternBox />
-              </PatternCell>
-              <PatternCell>
-                <PatternBox $filled />
-              </PatternCell>
-              <PatternCell>
-                <PatternBox />
-              </PatternCell>
-              <PatternCell>
-                <DottedBox />
-              </PatternCell>
-            </PatternCanvas>
-          </PatternOverlay>
         </div>
 
         {aiResult && (
