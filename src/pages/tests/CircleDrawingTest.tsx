@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { RotateCcw, Play, Pause, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Check, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
@@ -11,6 +11,9 @@ import TestResultsDisplay from '../../components/TestResultsDisplay';
 import { AIAnalysisResult } from '../../services/aiAnalysisService';
 import { saveTestResult } from '../../services/resultsStorageService';
 import useTaskCompletion from '../../hooks/useTaskCompletion';
+import { getNextTaskId } from '../../utils/testTaskMapping';
+import { useDisease } from '../../context/DiseaseContext';
+import { ArrowRight } from 'lucide-react';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -145,6 +148,8 @@ const CircleDrawingTest: React.FC = () => {
   const [validationResult, setValidationResult] = useState<DrawingValidationResult | null>(null);
   const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const { currentDisease } = useDisease();
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -215,6 +220,8 @@ const CircleDrawingTest: React.FC = () => {
         aiResult: analysis.aiResult,
         features: analysis.features
       });
+      
+      setIsCompleted(true);
     } finally {
       setIsAnalyzing(false);
     }
@@ -255,42 +262,12 @@ const CircleDrawingTest: React.FC = () => {
   );
 
   const handleNext = async () => {
-    const rawStrokes = canvasRef.current?.getAllStrokes() || [];
-    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
-
-    if (!rawStrokes.length || canvasSize.width === 0 || canvasSize.height === 0) {
-      navigate('/test/square_drawing');
-      return;
+    const nextTaskId = getNextTaskId('circle_drawing', currentDisease);
+    if (nextTaskId) {
+      navigate(`/test/${nextTaskId}`);
+    } else {
+      navigate('/tasks');
     }
-
-    const strokes = rawStrokes.map(stroke => ({
-      points: stroke.map(p => ({
-        x: p.x,
-        y: p.y,
-        pressure: p.pressure ?? 0,
-        timestamp: p.timestamp ?? 0,
-        tiltX: p.tiltX,
-        tiltY: p.tiltY,
-        rotation: p.rotation,
-      })),
-      startTime: stroke[0]?.timestamp ?? 0,
-      endTime: stroke[stroke.length - 1]?.timestamp ?? 0,
-    }));
-
-    await completeTaskAndNavigate(
-      {
-        taskId: 'circle_drawing',
-        elapsedTime: timeElapsed,
-        strokes,
-        canvasSize,
-        userInteractions: {
-          pauseCount: 0,
-          clearCount: 0,
-          undoCount: 0,
-        },
-      },
-      'square_drawing'
-    );
   };
 
   return (
@@ -303,7 +280,7 @@ const CircleDrawingTest: React.FC = () => {
         isComplete={timeRemaining === 0 && hasStarted}
         onRetry={clearCanvas}
         onNext={handleNext}
-        canProceed={timeRemaining === 0 && hasStarted && !isAnalyzing && !isCompleting}
+        canProceed={isCompleted && !isAnalyzing && !isCompleting}
       >
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? (
@@ -345,11 +322,20 @@ const CircleDrawingTest: React.FC = () => {
           )}
         </div>
 
-        {hasStarted && (
+        {hasStarted && timeRemaining !== 0 && !isAnalyzing && !isCompleted && (
           <Controls>
-            <Button $variant="danger" onClick={clearCanvas}>
-              <RotateCcw size={16} />
-              Retry
+            <Button $variant="primary" onClick={evaluateDrawing} disabled={isAnalyzing}>
+              <Check size={16} />
+              Done
+            </Button>
+          </Controls>
+        )}
+        
+        {isCompleted && !isAnalyzing && (
+          <Controls>
+            <Button $variant="primary" onClick={handleNext} disabled={isCompleting}>
+              <ArrowRight size={16} />
+              Next Task
             </Button>
           </Controls>
         )}

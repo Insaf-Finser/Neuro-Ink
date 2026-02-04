@@ -39,7 +39,7 @@ const Canvas = styled.canvas`
   max-height: 100%;
   cursor: crosshair;
   display: block;
-  background: white;
+  background: transparent;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
   touch-action: none;
@@ -60,6 +60,7 @@ const ReferenceCanvas = styled.canvas`
   max-width: 100%;
   max-height: 100%;
   box-sizing: border-box;
+  z-index: 0;
 `;
 
 const PlaceholderText = styled.div`

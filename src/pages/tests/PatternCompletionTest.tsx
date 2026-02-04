@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { RotateCcw, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Check, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
@@ -133,6 +133,7 @@ const PatternCompletionTest: React.FC = () => {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(90);
   const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
   const { completeTaskAndNavigate, isCompleting } = useTaskCompletion();
 
   useEffect(() => {
@@ -184,6 +185,7 @@ const PatternCompletionTest: React.FC = () => {
     setTimeRemaining(90);
     setAiResult(null);
     setIsAnalyzing(false);
+    setIsCompleted(false);
   };
 
   const formatTime = (seconds: number) => {
@@ -212,6 +214,7 @@ const PatternCompletionTest: React.FC = () => {
       const cognitiveScore = 100;
       const analysis = analyzeTest('patternCompletion', strokes, canvasSize, totalTimeMs, cognitiveScore);
       setAiResult(analysis.aiResult);
+      setIsCompleted(true);
     } finally {
       setIsAnalyzing(false);
     }
@@ -275,10 +278,10 @@ const PatternCompletionTest: React.FC = () => {
         step={18}
         totalSteps={21}
         instructions={instructions}
-        isComplete={timeRemaining === 0 && hasStarted}
+        isComplete={isCompleted}
         onRetry={clearCanvas}
         onNext={handleNext}
-        canProceed={timeRemaining === 0 && hasStarted && !isAnalyzing && !isCompleting}
+        canProceed={isCompleted && !isAnalyzing && !isCompleting}
       >
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? (
@@ -334,11 +337,11 @@ const PatternCompletionTest: React.FC = () => {
           </div>
         )}
 
-        {hasStarted && (
+        {hasStarted && timeRemaining !== 0 && !isAnalyzing && !isCompleted && (
           <Controls>
-            <Button $variant="danger" onClick={clearCanvas}>
-              <RotateCcw size={16} />
-              Retry
+            <Button $variant="primary" onClick={evaluateDrawing} disabled={isAnalyzing}>
+              <Check size={16} />
+              Done
             </Button>
           </Controls>
         )}

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { RotateCcw, Play, Pause, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Check, CheckCircle, AlertCircle, Clock, ArrowRight } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
@@ -10,6 +10,8 @@ import { analyzeTest } from '../../services/testAnalysisService';
 import TestResultsDisplay from '../../components/TestResultsDisplay';
 import { AIAnalysisResult } from '../../services/aiAnalysisService';
 import { saveTestResult } from '../../services/resultsStorageService';
+import { getNextTaskId } from '../../utils/testTaskMapping';
+import { useDisease } from '../../context/DiseaseContext';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -135,6 +137,7 @@ const PauseOverlay = styled.div`
 const SquareDrawingTest: React.FC = () => {
   const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
+  const { currentDisease } = useDisease();
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
@@ -143,6 +146,7 @@ const SquareDrawingTest: React.FC = () => {
   const [validationResult, setValidationResult] = useState<DrawingValidationResult | null>(null);
   const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -211,6 +215,8 @@ const SquareDrawingTest: React.FC = () => {
         aiResult: analysis.aiResult,
         features: analysis.features
       });
+      
+      setIsCompleted(true);
     } finally {
       setIsAnalyzing(false);
     }
@@ -239,6 +245,15 @@ const SquareDrawingTest: React.FC = () => {
     return 'waiting';
   };
 
+  const handleNext = () => {
+    const nextTaskId = getNextTaskId('square_drawing', currentDisease);
+    if (nextTaskId) {
+      navigate(`/test/${nextTaskId}`);
+    } else {
+      navigate('/tasks');
+    }
+  };
+
   const instructions = (
     <Instructions>
       <InstructionText>• Draw a square with equal sides</InstructionText>
@@ -259,8 +274,8 @@ const SquareDrawingTest: React.FC = () => {
         instructions={instructions}
         isComplete={timeRemaining === 0 && hasStarted}
         onRetry={clearCanvas}
-        onNext={() => navigate('/test/triangle_drawing')}
-        canProceed={timeRemaining === 0 && hasStarted}
+        onNext={handleNext}
+        canProceed={isCompleted && !isAnalyzing}
       >
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? (
@@ -303,11 +318,20 @@ const SquareDrawingTest: React.FC = () => {
           )}
         </div>
 
-        {hasStarted && (
+        {hasStarted && timeRemaining !== 0 && !isAnalyzing && !isCompleted && (
           <Controls>
-            <Button $variant="danger" onClick={clearCanvas}>
-              <RotateCcw size={16} />
-              Retry
+            <Button $variant="primary" onClick={evaluateDrawing} disabled={isAnalyzing}>
+              <Check size={16} />
+              Done
+            </Button>
+          </Controls>
+        )}
+        
+        {isCompleted && !isAnalyzing && (
+          <Controls>
+            <Button $variant="primary" onClick={handleNext}>
+              <ArrowRight size={16} />
+              Next Task
             </Button>
           </Controls>
         )}

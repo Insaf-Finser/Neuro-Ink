@@ -33,6 +33,8 @@ import NameMemoryTest from './pages/tests/NameMemoryTest';
 import NumberMemoryTest from './pages/tests/NumberMemoryTest';
 import RapidWritingTest from './pages/tests/RapidWritingTest';
 import ComprehensiveAssessmentTest from './pages/tests/ComprehensiveAssessmentTest';
+import MazeNavigationTest from './pages/tests/MazeNavigationTest';
+import PatternCompletionTest from './pages/tests/PatternCompletionTest';
 import TaskSelection from './pages/TaskSelection';
 import Results from './pages/Results';
 import AIAnalysisResults from './pages/AIAnalysisResults';
@@ -98,6 +100,8 @@ function App() {
           <Route path="/test/number_memory" element={<ProtectedRoute><MobileOnlyRoute><NumberMemoryTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/test/rapid_writing" element={<ProtectedRoute><MobileOnlyRoute><RapidWritingTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/test/comprehensive_assessment" element={<ProtectedRoute><MobileOnlyRoute><ComprehensiveAssessmentTest /></MobileOnlyRoute></ProtectedRoute>} />
+          <Route path="/test/maze_navigation" element={<ProtectedRoute><MobileOnlyRoute><MazeNavigationTest /></MobileOnlyRoute></ProtectedRoute>} />
+          <Route path="/test/pattern_completion" element={<ProtectedRoute><MobileOnlyRoute><PatternCompletionTest /></MobileOnlyRoute></ProtectedRoute>} />
           
           {/* Catch-all route for any test accessed via /test/:taskId - Mobile/Tablet only */}
           <Route path="/test/:taskId" element={<ProtectedRoute><MobileOnlyRoute><HandwritingTaskTest /></MobileOnlyRoute></ProtectedRoute>} />
@@ -126,6 +130,8 @@ function App() {
           <Route path="/alzheimers/test/number_memory" element={<ProtectedRoute><MobileOnlyRoute><NumberMemoryTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/alzheimers/test/rapid_writing" element={<ProtectedRoute><MobileOnlyRoute><RapidWritingTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/alzheimers/test/comprehensive_assessment" element={<ProtectedRoute><MobileOnlyRoute><ComprehensiveAssessmentTest /></MobileOnlyRoute></ProtectedRoute>} />
+          <Route path="/alzheimers/test/maze_navigation" element={<ProtectedRoute><MobileOnlyRoute><MazeNavigationTest /></MobileOnlyRoute></ProtectedRoute>} />
+          <Route path="/alzheimers/test/pattern_completion" element={<ProtectedRoute><MobileOnlyRoute><PatternCompletionTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/alzheimers/test/:taskId" element={<ProtectedRoute><MobileOnlyRoute><HandwritingTaskTest /></MobileOnlyRoute></ProtectedRoute>} />
           
           <Route path="/results" element={<ProtectedRoute><RequireConsent><Results /></RequireConsent></ProtectedRoute>} />

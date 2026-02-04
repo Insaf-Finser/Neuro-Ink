@@ -1,10 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { RotateCcw, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Check, CheckCircle, AlertCircle, Clock, ArrowRight } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
+import { getNextTaskId } from '../../utils/testTaskMapping';
+import { useDisease } from '../../context/DiseaseContext';
+import { saveTestResult } from '../../services/resultsStorageService';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -130,11 +133,14 @@ const PauseOverlay = styled.div`
 const SentenceMemoryTest: React.FC = () => {
   const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
+  const { currentDisease } = useDisease();
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-const [timeElapsed, setTimeElapsed] = useState(0);
+  const [timeElapsed, setTimeElapsed] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(120);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -198,6 +204,45 @@ return 0;
     return 'waiting';
   };
 
+  const evaluateDrawing = async () => {
+    const rawStrokes = canvasRef.current?.getAllStrokes() || [];
+    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
+
+    setIsAnalyzing(true);
+    try {
+      await saveTestResult(
+        {
+          testName: 'sentenceMemory',
+          durationMs: Math.max(1, timeElapsed * 1000),
+          // For memory tasks we don't have drawing-geometry validation yet; store lightweight metrics instead.
+          validation: null,
+          aiResult: null,
+          features: {
+            strokeCount: rawStrokes.length,
+            pointCount: rawStrokes.reduce((sum, s) => sum + s.length, 0),
+            canvasWidth: canvasSize.width,
+            canvasHeight: canvasSize.height,
+          },
+        },
+        undefined,
+        currentDisease
+      );
+
+      setIsCompleted(true);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleNext = () => {
+    const nextTaskId = getNextTaskId('sentence_memory', currentDisease);
+    if (nextTaskId) {
+      navigate(`/test/${nextTaskId}`);
+    } else {
+      navigate('/tasks');
+    }
+  };
+
   const instructions = (
     <Instructions>
       <InstructionText>• Remember this sentence: "The quick brown fox jumps over the lazy dog"</InstructionText>
@@ -218,8 +263,8 @@ return 0;
         instructions={instructions}
         isComplete={timeRemaining === 0 && hasStarted}
         onRetry={clearCanvas}
-        onNext={() => navigate('/test/number_memory')}
-        canProceed={timeRemaining === 0 && hasStarted}
+        onNext={handleNext}
+        canProceed={isCompleted && !isAnalyzing}
       >
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? (
@@ -260,11 +305,20 @@ return 0;
           )}
         </div>
 
-        {hasStarted && (
+        {hasStarted && timeRemaining !== 0 && !isAnalyzing && !isCompleted && (
           <Controls>
-            <Button $variant="danger" onClick={clearCanvas}>
-              <RotateCcw size={16} />
-              Retry
+            <Button $variant="primary" onClick={evaluateDrawing} disabled={isAnalyzing}>
+              <Check size={16} />
+              Done
+            </Button>
+          </Controls>
+        )}
+        
+        {isCompleted && !isAnalyzing && (
+          <Controls>
+            <Button $variant="primary" onClick={handleNext}>
+              <ArrowRight size={16} />
+              Next Task
             </Button>
           </Controls>
         )}

@@ -2,10 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 
-import { RotateCcw, CheckCircle, AlertCircle, Clock, Send } from 'lucide-react';
+import { Check, CheckCircle, AlertCircle, Clock, Send, X, ArrowRight } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
+import { saveTestResult } from '../../services/resultsStorageService';
+import { useDisease } from '../../context/DiseaseContext';
+import { getNextTaskId } from '../../utils/testTaskMapping';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -192,6 +195,7 @@ const ResultsText = styled.div`
 
 const NameMemoryTest: React.FC = () => {
   const navigate = useNavigate();
+  const { currentDisease } = useDisease();
   
   const [inputText, setInputText] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
@@ -203,6 +207,8 @@ const NameMemoryTest: React.FC = () => {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(90);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   const NAMES_TO_REMEMBER = ['JOHN', 'MARY', 'DAVID', 'SARAH', 'MICHAEL'];
 
@@ -282,11 +288,39 @@ const NameMemoryTest: React.FC = () => {
     setInputText(value);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const finalScore = calculateScore(inputText);
     setScore(finalScore);
     setIsSubmitted(true);
+    setIsSaving(true);
+    try {
+      await saveTestResult(
+        {
+          testName: 'nameMemory',
+          durationMs: Math.max(1, timeElapsed * 1000),
+          validation: null,
+          aiResult: null,
+          features: {
+            correctCount: finalScore,
+            total: 5,
+          },
+        },
+        undefined,
+        currentDisease
+      );
+      setIsCompleted(true);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
+  const handleNext = () => {
+    const nextTaskId = getNextTaskId('name_memory', currentDisease);
+    if (nextTaskId) {
+      navigate(`/test/${nextTaskId}`);
+    } else {
+      navigate('/tasks');
+    }
   };
 
   useEffect(() => {
@@ -340,6 +374,9 @@ const NameMemoryTest: React.FC = () => {
         totalSteps={21}
 
         instructions={isInMemorizePhase || hasStarted ? null : instructions}
+        isComplete={isCompleted}
+        onNext={handleNext}
+        canProceed={isCompleted && !isSaving}
       >
         {isInMemorizePhase ? (
           <>
@@ -409,13 +446,19 @@ const NameMemoryTest: React.FC = () => {
             {hasStarted && (
               <Controls>
                 <Button $variant="danger" onClick={clearInput}>
-                  <RotateCcw size={16} />
+                  <X size={16} />
                   Clear
                 </Button>
                 {!isSubmitted && (
-                  <Button $variant="primary" onClick={handleSubmit}>
+                  <Button $variant="primary" onClick={handleSubmit} disabled={isSaving}>
                     <Send size={16} />
-                    Submit
+                    {isSaving ? 'Saving...' : 'Submit'}
+                  </Button>
+                )}
+                {isCompleted && (
+                  <Button $variant="primary" onClick={handleNext} disabled={isSaving}>
+                    <ArrowRight size={16} />
+                    Next Task
                   </Button>
                 )}
               </Controls>

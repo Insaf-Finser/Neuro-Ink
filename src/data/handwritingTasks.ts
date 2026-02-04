@@ -212,8 +212,7 @@ export const HANDWRITING_TASKS: HandwritingTask[] = [
 
   // SPATIAL TASKS (Spatial Processing & Executive Function)
   {
-    // NOTE: uses dash to match router + test mapping (`/test/clock-drawing`)
-    id: 'clock-drawing',
+    id: 'clock_drawing',
     name: 'Clock Drawing',
     category: 'spatial',
     description: 'Draw a clock showing 10:10',
@@ -338,21 +337,11 @@ export const TASK_DIFFICULTY_LEVELS = {
   hard: 'Hard'
 };
 
-/**
- * Get tasks for a specific disease
- * @param disease - The disease type ('alzheimers' | 'parkinsons')
- * @returns Array of tasks for the specified disease
- */
+// Re-export DiseaseType for convenience
+export type { DiseaseType };
+
+// Function to get tasks for a specific disease
+// Currently returns the same tasks for both diseases
 export function getTasksForDisease(disease: DiseaseType): HandwritingTask[] {
-  switch (disease) {
-    case 'alzheimers':
-      // Return existing Alzheimer's tasks
-      return HANDWRITING_TASKS;
-    case 'parkinsons':
-      // Parkinson's tasks not implemented yet
-      return [];
-    default:
-      // Default to Alzheimer's for backward compatibility
-      return HANDWRITING_TASKS;
-  }
+  return HANDWRITING_TASKS;
 }

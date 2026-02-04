@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { RotateCcw, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Check, CheckCircle, AlertCircle, Clock, ArrowRight } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
 import { getTasksForDisease } from '../../data/handwritingTasks';
 import { useDisease } from '../../context/DiseaseContext';
+import { getNextTaskId } from '../../utils/testTaskMapping';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -140,8 +141,10 @@ const HandwritingTaskTest: React.FC = () => {
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-const [timeElapsed, setTimeElapsed] = useState(0);
+  const [timeElapsed, setTimeElapsed] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(task?.timeLimit || 60);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   React.useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -205,6 +208,25 @@ const [timeElapsed, setTimeElapsed] = useState(0);
     return 'waiting';
   };
 
+  const evaluateDrawing = async () => {
+    setIsAnalyzing(true);
+    setIsCompleted(true);
+    setIsAnalyzing(false);
+  };
+
+  const handleNext = () => {
+    if (taskId) {
+      const nextTaskId = getNextTaskId(taskId, currentDisease);
+      if (nextTaskId) {
+        navigate(`/test/${nextTaskId}`);
+      } else {
+        navigate('/tasks');
+      }
+    } else {
+      navigate('/tasks');
+    }
+  };
+
   if (!task) {
     return (
       <Container>
@@ -245,8 +267,8 @@ const [timeElapsed, setTimeElapsed] = useState(0);
         instructions={instructions}
         isComplete={timeRemaining === 0 && hasStarted}
         onRetry={clearCanvas}
-        onNext={() => navigate('/results')}
-        canProceed={timeRemaining === 0 && hasStarted}
+        onNext={handleNext}
+        canProceed={isCompleted && !isAnalyzing}
       >
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? (
@@ -287,11 +309,20 @@ const [timeElapsed, setTimeElapsed] = useState(0);
           )}
         </div>
 
-        {hasStarted && (
+        {hasStarted && timeRemaining !== 0 && !isAnalyzing && !isCompleted && (
           <Controls>
-            <Button $variant="danger" onClick={clearCanvas}>
-              <RotateCcw size={16} />
-              Retry
+            <Button $variant="primary" onClick={evaluateDrawing} disabled={isAnalyzing}>
+              <Check size={16} />
+              Done
+            </Button>
+          </Controls>
+        )}
+        
+        {isCompleted && !isAnalyzing && (
+          <Controls>
+            <Button $variant="primary" onClick={handleNext}>
+              <ArrowRight size={16} />
+              Next Task
             </Button>
           </Controls>
         )}

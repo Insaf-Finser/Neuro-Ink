@@ -3,9 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { CheckCircle, Clock, AlertCircle, TrendingUp, BarChart3 } from 'lucide-react';
-import { useTaskCompletion } from '../hooks/useTaskCompletion';
-import { HANDWRITING_TASKS, getTasksForDisease } from '../data/handwritingTasks';
+import { CheckCircle, Clock, BarChart3 } from 'lucide-react';
+import { getTasksForDisease } from '../data/handwritingTasks';
 import { getTestResults, getCompletedTaskIds } from '../services/resultsStorageService';
 import { sessionStorageService } from '../services/sessionStorageService';
 import { useAuth } from '../context/AuthContext';
@@ -238,7 +237,7 @@ const TaskProgressTracker: React.FC = () => {
         
         // Create progress object for each task
         const progresses: Record<string, any> = {};
-        HANDWRITING_TASKS.forEach(task => {
+        tasks.forEach(task => {
           const isCompleted = allCompleted.has(task.id);
           const result = firebaseResults.find(r => r.taskId === task.id);
           
@@ -272,7 +271,7 @@ const TaskProgressTracker: React.FC = () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [user]);
+  }, [user, currentDisease]);
 
   if (loading) {
     return (

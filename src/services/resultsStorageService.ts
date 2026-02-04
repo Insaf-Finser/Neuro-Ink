@@ -72,6 +72,7 @@ function timestampToISO(timestamp: any): string {
 
 /**
  * Saves a test result to Firestore (for authenticated users) and localStorage (as fallback/cache)
+ * Priority: Firestore first for authenticated users, localStorage as fallback
  */
 export async function saveTestResult(
   result: Omit<StoredTestResult, 'userId' | 'completedAt'>, 
@@ -95,14 +96,9 @@ export async function saveTestResult(
     disease: diseaseType
   };
 
-  // Always save to localStorage for offline access and guest users
-  const key = getUserKey(id);
-  const existing: StoredTestResult[] = JSON.parse(localStorage.getItem(key) || '[]');
-  const updated = [...existing, entry];
-  localStorage.setItem(key, JSON.stringify(updated));
-
-  // Save to Firestore if user is authenticated
+  // Save to Firestore FIRST if user is authenticated
   const user = auth.currentUser;
+  let firestoreSaveSuccess = false;
   if (user && id !== 'guest') {
     try {
       const testResultsRef = collection(db, 'users', user.uid, 'testResults');
@@ -116,15 +112,24 @@ export async function saveTestResult(
       });
       // Add Firestore document ID to entry
       entry.id = docRef.id;
-      // Update localStorage with the ID
-      const updatedWithId = updated.map((r, idx) => 
-        idx === updated.length - 1 ? { ...r, id: docRef.id } : r
-      );
-      localStorage.setItem(key, JSON.stringify(updatedWithId));
+      firestoreSaveSuccess = true;
+      console.log(`Test result saved to Firestore for user ${user.uid}, task: ${result.testName}`);
     } catch (error) {
       console.error('Error saving test result to Firestore:', error);
-      // Continue even if Firestore save fails (localStorage is already saved)
+      // Continue to localStorage as fallback
     }
+  }
+
+  // Always save to localStorage for offline access and as cache/backup
+  const key = getUserKey(id);
+  const existing: StoredTestResult[] = JSON.parse(localStorage.getItem(key) || '[]');
+  const updated = [...existing, entry];
+  localStorage.setItem(key, JSON.stringify(updated));
+
+  if (firestoreSaveSuccess) {
+    console.log(`Results synced to both Firestore and localStorage`);
+  } else if (user && id !== 'guest') {
+    console.warn(`Results saved to localStorage only (Firestore sync failed for user ${user.uid})`);
   }
 
   return entry;
@@ -132,11 +137,12 @@ export async function saveTestResult(
 
 /**
  * Fetches test results from Firestore (for authenticated users) or localStorage (fallback)
+ * For authenticated users, prioritizes Firestore data and syncs to localStorage
  */
 export async function getTestResults(userId?: string): Promise<StoredTestResult[]> {
   const id = userId || getUserId();
   
-  // Try Firestore first for authenticated users
+  // Try Firestore first for authenticated users - PRIORITY for authenticated users
   const user = auth.currentUser;
   if (user && id !== 'guest') {
     try {
@@ -163,10 +169,11 @@ export async function getTestResults(userId?: string): Promise<StoredTestResult[
         });
       });
 
-      // Sync to localStorage for offline access
+      // Sync Firestore data to localStorage for offline access
       const key = getUserKey(id);
       localStorage.setItem(key, JSON.stringify(results));
       
+      console.log(`Fetched ${results.length} results from Firestore for user ${user.uid}`);
       return results;
     } catch (error) {
       console.error('Error fetching test results from Firestore:', error);
@@ -174,7 +181,7 @@ export async function getTestResults(userId?: string): Promise<StoredTestResult[
     }
   }
 
-  // Fallback to localStorage
+  // Fallback to localStorage (for guests or if Firestore fails)
   const key = getUserKey(id);
   const results = JSON.parse(localStorage.getItem(key) || '[]');
   

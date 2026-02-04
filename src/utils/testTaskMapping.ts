@@ -25,6 +25,7 @@ import NumberMemoryTest from '../pages/tests/NumberMemoryTest';
 import RapidWritingTest from '../pages/tests/RapidWritingTest';
 import ComprehensiveAssessmentTest from '../pages/tests/ComprehensiveAssessmentTest';
 import HandwritingTaskTest from '../pages/tests/HandwritingTaskTest';
+import { getTasksForDisease, DiseaseType } from '../data/handwritingTasks';
 
 // Mapping between test names and task IDs for progress tracking
 export const TEST_TO_TASK_MAP: Record<string, string> = {
@@ -101,4 +102,21 @@ export function getTestNameFromTaskId(taskId: string): string | null {
  */
 export function getTestComponent(taskId: string): React.ComponentType<any> | null {
   return TASK_TO_COMPONENT_MAP[taskId] || HandwritingTaskTest;
+}
+
+/**
+ * Get the next task ID in order
+ * @param currentTaskId - The current task ID
+ * @param disease - The disease type ('alzheimers' | 'parkinsons')
+ * @returns The next task ID or null if it's the last task
+ */
+export function getNextTaskId(currentTaskId: string, disease: DiseaseType = 'alzheimers'): string | null {
+  const tasks = getTasksForDisease(disease);
+  const currentIndex = tasks.findIndex(task => task.id === currentTaskId);
+  
+  if (currentIndex === -1 || currentIndex === tasks.length - 1) {
+    return null; // Task not found or it's the last task
+  }
+  
+  return tasks[currentIndex + 1].id;
 }

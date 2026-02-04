@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { RotateCcw, Play, Pause, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Check, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { StylusPoint } from '../../services/stylusInputService';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
@@ -143,6 +143,7 @@ const SpiralDrawingTest: React.FC = () => {
   const [validationResult, setValidationResult] = useState<DrawingValidationResult | null>(null);
   const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -211,6 +212,7 @@ const SpiralDrawingTest: React.FC = () => {
         aiResult: analysis.aiResult,
         features: analysis.features
       });
+      setIsCompleted(true);
     } finally {
       setIsAnalyzing(false);
     }
@@ -225,6 +227,7 @@ const SpiralDrawingTest: React.FC = () => {
     setValidationResult(null);
     setAiResult(null);
     setIsAnalyzing(false);
+    setIsCompleted(false);
   };
 
   const formatTime = (seconds: number) => {
@@ -257,10 +260,10 @@ const SpiralDrawingTest: React.FC = () => {
         step={5}
         totalSteps={21}
         instructions={instructions}
-        isComplete={timeRemaining === 0 && hasStarted}
+        isComplete={isCompleted}
         onRetry={clearCanvas}
         onNext={() => navigate('/test/letter_copy')}
-        canProceed={timeRemaining === 0 && hasStarted}
+        canProceed={isCompleted && !isAnalyzing}
       >
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? (
@@ -303,11 +306,11 @@ const SpiralDrawingTest: React.FC = () => {
           )}
         </div>
 
-        {hasStarted && (
+        {hasStarted && timeRemaining !== 0 && !isAnalyzing && !isCompleted && (
           <Controls>
-            <Button $variant="danger" onClick={clearCanvas}>
-              <RotateCcw size={16} />
-              Retry
+            <Button $variant="primary" onClick={evaluateDrawing} disabled={isAnalyzing}>
+              <Check size={16} />
+              Done
             </Button>
           </Controls>
         )}
