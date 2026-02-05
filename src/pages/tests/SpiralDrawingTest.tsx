@@ -10,6 +10,8 @@ import { analyzeTest } from '../../services/testAnalysisService';
 import TestResultsDisplay from '../../components/TestResultsDisplay';
 import { AIAnalysisResult } from '../../services/aiAnalysisService';
 import { saveTestResult } from '../../services/resultsStorageService';
+import { getNextTaskId } from '../../utils/testTaskMapping';
+import { useDisease } from '../../context/DiseaseContext';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -135,6 +137,7 @@ const PauseOverlay = styled.div`
 const SpiralDrawingTest: React.FC = () => {
   const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
+  const { currentDisease } = useDisease();
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
@@ -253,16 +256,25 @@ const SpiralDrawingTest: React.FC = () => {
     </Instructions>
   );
 
+  const handleNext = () => {
+    const nextTaskId = getNextTaskId('spiral_drawing', currentDisease);
+    if (nextTaskId) {
+      navigate(`/test/${nextTaskId}`);
+    } else {
+      navigate('/results');
+    }
+  };
+
   return (
     <Container>
       <TestHarness
         title="Spiral Drawing Test"
         step={5}
-        totalSteps={21}
+        totalSteps={16}
         instructions={instructions}
         isComplete={isCompleted}
         onRetry={clearCanvas}
-        onNext={() => navigate('/test/letter_copy')}
+        onNext={handleNext}
         canProceed={isCompleted && !isAnalyzing}
       >
         <StatusCard $status={getStatus()}>

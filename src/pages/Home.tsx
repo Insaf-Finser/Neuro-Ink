@@ -6,6 +6,7 @@ import { Brain, Target, Clock, Users, ArrowRight, Shield, Zap } from 'lucide-rea
 import { consentService } from '../services/consentService';
 import { useStandalone } from '../hooks/useStandalone';
 import { useDisease } from '../context/DiseaseContext';
+import DiseaseAwareness from './DiseaseAwareness';
 
 const HeroSection = styled.section`
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -199,17 +200,21 @@ const Home: React.FC = () => {
   const handleStartAssessment = async () => {
     setLoading(true);
     try {
-      // Navigate directly to Alzheimer's awareness page
-      navigate('/alzheimers');
+      // Navigate to current disease awareness (Alzheimer's or Parkinson's)
+      navigate(`/${currentDisease}`);
     } catch (error) {
       console.error('Error navigating:', error);
-      navigate('/alzheimers');
+      navigate(`/${currentDisease}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
+    // Show Parkinson's awareness on Home only when running as an installed PWA
+    isStandalone && currentDisease === 'parkinsons' ? (
+      <DiseaseAwareness disease={currentDisease} />
+    ) : (
     <>
       <HeroSection>
         <div className="container">
@@ -363,6 +368,7 @@ const Home: React.FC = () => {
         </div>
       </StatsSection>
     </>
+    )
   );
 };
 

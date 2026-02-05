@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
@@ -19,16 +19,11 @@ import SquareDrawingTest from './pages/tests/SquareDrawingTest';
 import TriangleDrawingTest from './pages/tests/TriangleDrawingTest';
 import PentagonDrawingTest from './pages/tests/PentagonDrawingTest';
 import SpiralDrawingTest from './pages/tests/SpiralDrawingTest';
-import LetterCopyTest from './pages/tests/LetterCopyTest';
 import WordMemoryTest from './pages/tests/WordMemoryTest';
 import RepetitiveWritingTest from './pages/tests/RepetitiveWritingTest';
 import DotConnectionTest from './pages/tests/DotConnectionTest';
-import WordCopyTest from './pages/tests/WordCopyTest';
-import NumberCopyTest from './pages/tests/NumberCopyTest';
 import SentenceMemoryTest from './pages/tests/SentenceMemoryTest';
 import SignaturePracticeTest from './pages/tests/SignaturePracticeTest';
-import ComplexFigureCopyTest from './pages/tests/ComplexFigureCopyTest';
-import LineTracingTest from './pages/tests/LineTracingTest';
 import NameMemoryTest from './pages/tests/NameMemoryTest';
 import NumberMemoryTest from './pages/tests/NumberMemoryTest';
 import RapidWritingTest from './pages/tests/RapidWritingTest';
@@ -47,6 +42,8 @@ import { DiseaseRouteRedirect } from './components/DiseaseRoute';
 import DiseaseAwareness from './pages/DiseaseAwareness';
 import ParkinsonsTaskSelection from './pages/parkinsons/ParkinsonsTaskSelection';
 import ParkinsonsTest from './pages/parkinsons/ParkinsonsTest';
+import AssessmentTest from './pages/AssessmentTest';
+import AssessmentResults from './pages/AssessmentResults';
 
 function App() {
   return (
@@ -68,6 +65,14 @@ function App() {
           <Route path="/parkinsons/tests" element={<MobileOnlyRoute><ParkinsonsTaskSelection /></MobileOnlyRoute>} />
           <Route path="/parkinsons/test/:taskId" element={<MobileOnlyRoute><ParkinsonsTest /></MobileOnlyRoute>} />
           
+          {/* Parkinson's assessment routes (PWA-based, authenticated, unified) - Mobile/Tablet only */}
+          <Route path="/parkinsons/assessment-test/:taskId" element={<ProtectedRoute><MobileOnlyRoute><AssessmentTest /></MobileOnlyRoute></ProtectedRoute>} />
+          <Route path="/parkinsons/assessment-results" element={<ProtectedRoute><MobileOnlyRoute><AssessmentResults /></MobileOnlyRoute></ProtectedRoute>} />
+          {/* Parkinson's nav targets: dashboard/tasks/results point to disease-specific pages */}
+          <Route path="/parkinsons/dashboard" element={<Navigate to="/parkinsons" replace />} />
+          <Route path="/parkinsons/tasks" element={<Navigate to="/parkinsons" replace />} />
+          <Route path="/parkinsons/results" element={<Navigate to="/parkinsons/assessment-results" replace />} />
+          
           {/* Old routes (will be redirected internally to disease-scoped routes) */}
           <Route path="/dashboard" element={<ProtectedRoute><RequireConsent><Dashboard /></RequireConsent></ProtectedRoute>} />
           <Route path="/tasks" element={<ProtectedRoute><RequireConsent><TaskSelection /></RequireConsent></ProtectedRoute>} />
@@ -86,16 +91,11 @@ function App() {
           <Route path="/test/triangle_drawing" element={<ProtectedRoute><MobileOnlyRoute><TriangleDrawingTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/test/pentagon_drawing" element={<ProtectedRoute><MobileOnlyRoute><PentagonDrawingTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/test/spiral_drawing" element={<ProtectedRoute><MobileOnlyRoute><SpiralDrawingTest /></MobileOnlyRoute></ProtectedRoute>} />
-          <Route path="/test/letter_copy" element={<ProtectedRoute><MobileOnlyRoute><LetterCopyTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/test/word_memory" element={<ProtectedRoute><MobileOnlyRoute><WordMemoryTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/test/repetitive_writing" element={<ProtectedRoute><MobileOnlyRoute><RepetitiveWritingTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/test/dot_connection" element={<ProtectedRoute><MobileOnlyRoute><DotConnectionTest /></MobileOnlyRoute></ProtectedRoute>} />
-          <Route path="/test/word_copy" element={<ProtectedRoute><MobileOnlyRoute><WordCopyTest /></MobileOnlyRoute></ProtectedRoute>} />
-          <Route path="/test/number_copy" element={<ProtectedRoute><MobileOnlyRoute><NumberCopyTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/test/sentence_memory" element={<ProtectedRoute><MobileOnlyRoute><SentenceMemoryTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/test/signature_practice" element={<ProtectedRoute><MobileOnlyRoute><SignaturePracticeTest /></MobileOnlyRoute></ProtectedRoute>} />
-          <Route path="/test/complex_figure_copy" element={<ProtectedRoute><MobileOnlyRoute><ComplexFigureCopyTest /></MobileOnlyRoute></ProtectedRoute>} />
-          <Route path="/test/line_tracing" element={<ProtectedRoute><MobileOnlyRoute><LineTracingTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/test/name_memory" element={<ProtectedRoute><MobileOnlyRoute><NameMemoryTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/test/number_memory" element={<ProtectedRoute><MobileOnlyRoute><NumberMemoryTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/test/rapid_writing" element={<ProtectedRoute><MobileOnlyRoute><RapidWritingTest /></MobileOnlyRoute></ProtectedRoute>} />
@@ -116,16 +116,11 @@ function App() {
           <Route path="/alzheimers/test/triangle_drawing" element={<ProtectedRoute><MobileOnlyRoute><TriangleDrawingTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/alzheimers/test/pentagon_drawing" element={<ProtectedRoute><MobileOnlyRoute><PentagonDrawingTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/alzheimers/test/spiral_drawing" element={<ProtectedRoute><MobileOnlyRoute><SpiralDrawingTest /></MobileOnlyRoute></ProtectedRoute>} />
-          <Route path="/alzheimers/test/letter_copy" element={<ProtectedRoute><MobileOnlyRoute><LetterCopyTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/alzheimers/test/word_memory" element={<ProtectedRoute><MobileOnlyRoute><WordMemoryTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/alzheimers/test/repetitive_writing" element={<ProtectedRoute><MobileOnlyRoute><RepetitiveWritingTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/alzheimers/test/dot_connection" element={<ProtectedRoute><MobileOnlyRoute><DotConnectionTest /></MobileOnlyRoute></ProtectedRoute>} />
-          <Route path="/alzheimers/test/word_copy" element={<ProtectedRoute><MobileOnlyRoute><WordCopyTest /></MobileOnlyRoute></ProtectedRoute>} />
-          <Route path="/alzheimers/test/number_copy" element={<ProtectedRoute><MobileOnlyRoute><NumberCopyTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/alzheimers/test/sentence_memory" element={<ProtectedRoute><MobileOnlyRoute><SentenceMemoryTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/alzheimers/test/signature_practice" element={<ProtectedRoute><MobileOnlyRoute><SignaturePracticeTest /></MobileOnlyRoute></ProtectedRoute>} />
-          <Route path="/alzheimers/test/complex_figure_copy" element={<ProtectedRoute><MobileOnlyRoute><ComplexFigureCopyTest /></MobileOnlyRoute></ProtectedRoute>} />
-          <Route path="/alzheimers/test/line_tracing" element={<ProtectedRoute><MobileOnlyRoute><LineTracingTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/alzheimers/test/name_memory" element={<ProtectedRoute><MobileOnlyRoute><NameMemoryTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/alzheimers/test/number_memory" element={<ProtectedRoute><MobileOnlyRoute><NumberMemoryTest /></MobileOnlyRoute></ProtectedRoute>} />
           <Route path="/alzheimers/test/rapid_writing" element={<ProtectedRoute><MobileOnlyRoute><RapidWritingTest /></MobileOnlyRoute></ProtectedRoute>} />

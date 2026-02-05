@@ -19,6 +19,13 @@ import { useDisease } from '../context/DiseaseContext';
 const ResultsContainer = styled.div`
   padding: 40px 0;
   min-height: calc(100vh - 160px);
+
+  @media (max-width: 1024px) {
+    padding: 32px 0;
+  }
+  @media (max-width: 768px) {
+    padding: 20px 0;
+  }
 `;
 
 const ResultsHeader = styled.div`
@@ -31,6 +38,11 @@ const ResultsTitle = styled.h1`
   font-weight: 800;
   color: #333;
   margin-bottom: 24px;
+
+  @media (max-width: 768px) {
+    font-size: 1.8rem;
+    margin-bottom: 16px;
+  }
 `;
 
 const ResultsSubtitle = styled.p`
@@ -38,6 +50,12 @@ const ResultsSubtitle = styled.p`
   color: #666;
   max-width: 700px;
   margin: 0 auto;
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    max-width: 100%;
+    padding: 0 16px;
+  }
 `;
 
 const ResultsContent = styled.div`
@@ -47,6 +65,18 @@ const ResultsContent = styled.div`
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
   max-width: 1200px;
   margin: 0 auto;
+
+  @media (max-width: 1024px) {
+    padding: 40px;
+    max-width: 960px;
+  }
+
+  @media (max-width: 768px) {
+    padding: 20px;
+    border-radius: 12px;
+    width: calc(100% - 32px);
+    margin: 0 auto;
+  }
 `;
 
 const StatsSection = styled.div`
@@ -63,8 +93,12 @@ const StatsTitle = styled.h2`
 
 const StatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 24px;
+
+  @media (max-width: 600px) {
+    gap: 16px;
+  }
 `;
 
 const StatCard = styled.div`

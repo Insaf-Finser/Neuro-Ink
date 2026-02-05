@@ -1,6 +1,6 @@
 /**
  * Determines if a route requires PWA install (standalone mode)
- * Only Alzheimer's test routes require PWA install
+ * Both Alzheimer's and Parkinson's assessment routes require PWA install
  * 
  * Routes that require PWA:
  * - /alzheimers/dashboard
@@ -9,6 +9,8 @@
  * - /alzheimers/results
  * - /alzheimers/ai-analysis
  * - /alzheimers/comprehensive-results
+ * - /parkinsons/assessment-test/* (Parkinson's assessment routes)
+ * - /parkinsons/assessment-results
  * - Old routes that redirect to Alzheimer's test routes:
  *   - /dashboard
  *   - /tasks
@@ -22,12 +24,12 @@
  * - /parkinsons/test/* (Parkinson's test pages - UI only, no analysis)
  */
 export function routeRequiresPWA(pathname: string): boolean {
-  // Explicitly exclude Parkinson's test routes (they don't require PWA)
+  // Explicitly exclude Parkinson's prototype test routes (they don't require PWA)
   if (pathname.startsWith('/parkinsons/test') || pathname === '/parkinsons/tests') {
     return false;
   }
 
-  // Routes that require PWA install (Alzheimer's test routes only)
+  // Routes that require PWA install (Alzheimer's test routes AND Parkinson's assessment routes)
   const pwaRequiredRoutes = [
     '/alzheimers/dashboard',
     '/alzheimers/tasks',
@@ -35,6 +37,8 @@ export function routeRequiresPWA(pathname: string): boolean {
     '/alzheimers/ai-analysis',
     '/alzheimers/comprehensive-results',
     '/alzheimers/test/',
+    '/parkinsons/assessment-test/',
+    '/parkinsons/assessment-results',
     // Old routes that redirect to Alzheimer's test routes
     '/dashboard',
     '/tasks',

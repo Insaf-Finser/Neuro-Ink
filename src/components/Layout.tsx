@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { Activity, Brain, ClipboardList, Home, Shield, LogOut, User } from 'lucide-react';
 import InstallPrompt from './InstallPrompt';
 import { useStandalone } from '../hooks/useStandalone';
+import { usePWAManifest } from '../hooks/usePWAManifest';
 import { useAuth } from '../context/AuthContext';
 import { useDisease } from '../context/DiseaseContext';
 import { consentService } from '../services/consentService';
@@ -425,6 +426,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isStandalone = useStandalone();
   const { user, signOut, loading: authLoading } = useAuth();
   const { currentDisease, setDisease } = useDisease();
+  usePWAManifest(currentDisease);
   const [consentAccepted, setConsentAccepted] = useState<boolean | null>(null);
   const [consentLoading, setConsentLoading] = useState(true);
 
@@ -624,6 +626,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   }, [isStandalone, currentDisease, setDisease]);
 
+  // Detect mismatch between installed PWA (which may have been installed for a different disease)
+  // and the current route/disease. If mismatch, show a small reinstall prompt.
+  const routeDisease = location.pathname.startsWith('/parkinsons') ? 'parkinsons' :
+                        location.pathname.startsWith('/alzheimers') ? 'alzheimers' : null;
+  const persisted = (typeof window !== 'undefined') ? localStorage.getItem('selectedDisease') as 'alzheimers' | 'parkinsons' | null : null;
+  const installMismatch = isStandalone && routeDisease && persisted && persisted !== routeDisease;
+
+  const MismatchBanner = styled.div`
+    width: 100%;
+    background: #fffbeb;
+    border: 1px solid #f59e0b;
+    color: #92400e;
+    padding: 8px 12px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    position: relative;
+    z-index: 999;
+  `;
+
   // Check if current route requires PWA install
   const requiresPWA = routeRequiresPWA(location.pathname);
 
@@ -680,7 +702,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }
 
   return (
-    <AppShell>
+    <>
+      {installMismatch && (
+        <MismatchBanner>
+          The installed NeuroInk app was configured for the other disease. To use the full PWA for this disease, please uninstall and reinstall the app (this updates the manifest). You can still switch diseases within the app from the toggle.
+        </MismatchBanner>
+      )}
+      <AppShell>
         {isHomePage ? (
           // On home page, show overlay without navbar background
           <HomeOverlay>
@@ -774,6 +802,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </BottomNavWrapper>
       )}
     </AppShell>
+      </>
   );
 };
 

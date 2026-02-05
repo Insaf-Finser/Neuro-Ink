@@ -32,6 +32,14 @@ const ResultsContainer = styled.div`
   padding: 40px 0;
   min-height: calc(100vh - 160px);
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+
+  @media (max-width: 1024px) {
+    padding: 32px 0;
+  }
+
+  @media (max-width: 768px) {
+    padding: 20px 0;
+  }
 `;
 
 const ResultsHeader = styled.div`
@@ -47,6 +55,10 @@ const ResultsTitle = styled.h1`
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+
+  @media (max-width: 768px) {
+    font-size: 1.8rem;
+  }
 `;
 
 const ResultsSubtitle = styled.p`
@@ -54,6 +66,13 @@ const ResultsSubtitle = styled.p`
   color: #718096;
   max-width: 600px;
   margin: 0 auto 32px;
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    max-width: 100%;
+    padding: 0 16px;
+    margin-bottom: 20px;
+  }
 `;
 
 const ActionButtons = styled.div`
@@ -61,6 +80,12 @@ const ActionButtons = styled.div`
   gap: 16px;
   justify-content: center;
   margin-bottom: 40px;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
@@ -104,6 +129,13 @@ const NavigationTabs = styled.div`
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
+
+  @media (max-width: 600px) {
+    max-width: 100%;
+    padding: 8px 12px;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
 `;
 
 const TabButton = styled.button<{ $active: boolean }>`

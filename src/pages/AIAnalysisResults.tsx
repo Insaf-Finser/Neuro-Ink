@@ -29,6 +29,14 @@ const ResultsContainer = styled.div`
   padding: 40px 0;
   min-height: calc(100vh - 160px);
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+
+  @media (max-width: 1024px) {
+    padding: 32px 0;
+  }
+
+  @media (max-width: 768px) {
+    padding: 24px 0;
+  }
 `;
 
 const ResultsHeader = styled.div`
@@ -44,6 +52,10 @@ const ResultsTitle = styled.h1`
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+
+  @media (max-width: 768px) {
+    font-size: 1.8rem;
+  }
 `;
 
 const ResultsSubtitle = styled.p`
@@ -51,6 +63,13 @@ const ResultsSubtitle = styled.p`
   color: #718096;
   max-width: 600px;
   margin: 0 auto 32px;
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    max-width: 100%;
+    padding: 0 16px;
+    margin-bottom: 20px;
+  }
 `;
 
 const ActionButtons = styled.div`
@@ -58,6 +77,12 @@ const ActionButtons = styled.div`
   gap: 16px;
   justify-content: center;
   margin-bottom: 40px;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
@@ -95,6 +120,11 @@ const AnalysisSection = styled.div`
   padding: 32px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   margin-bottom: 32px;
+
+  @media (max-width: 768px) {
+    padding: 20px;
+    border-radius: 12px;
+  }
 `;
 
 const SectionTitle = styled.h2`
@@ -109,9 +139,14 @@ const SectionTitle = styled.h2`
 
 const InsightsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 24px;
   margin-bottom: 32px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 `;
 
 const InsightCard = styled(motion.div)`

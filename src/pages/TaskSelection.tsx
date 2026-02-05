@@ -15,6 +15,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { HANDWRITING_TASKS, TASK_CATEGORIES, getTasksForDisease } from '../data/handwritingTasks';
+import { PARKINSONS_TASKS, PARKINSONS_TASK_CATEGORIES } from '../data/parkinsonsTasks';
 import { sessionStorageService } from '../services/sessionStorageService';
 import { getTestResults, getCompletedTaskIds } from '../services/resultsStorageService';
 import { useDisease } from '../context/DiseaseContext';
@@ -269,6 +270,7 @@ const getCategoryIcon = (category: string) => {
 const TaskSelection: React.FC = () => {
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [taskProgress, setTaskProgress] = useState<Record<string, any>>({});
+  const { currentDisease } = useDisease();
 
   // Load completed tasks from both session storage and Firebase test results
   useEffect(() => {
@@ -318,27 +320,26 @@ const TaskSelection: React.FC = () => {
     };
 
     loadProgress();
-  }, []);
+  }, [currentDisease]);
 
   // Get disease-aware tasks
-  const { currentDisease } = useDisease();
-  const tasks = getTasksForDisease(currentDisease);
+  const tasks = currentDisease === 'parkinsons' ? PARKINSONS_TASKS : getTasksForDisease(currentDisease);
 
   // Group tasks by category
-  const tasksByCategory = tasks.reduce((acc, task) => {
+  const tasksByCategory = (tasks as any[]).reduce((acc: any, task: any) => {
     if (!acc[task.category]) {
       acc[task.category] = [];
     }
     acc[task.category].push(task);
     return acc;
-  }, {} as Record<string, typeof tasks>);
+  }, {} as Record<string, any[]>);
 
   const totalTasks = tasks.length;
   const completedCount = completedTasks.length;
   const progressPercentage = Math.round((completedCount / totalTasks) * 100);
 
   // Get next incomplete task
-  const nextTask = tasks.find(task => !completedTasks.includes(task.id));
+  const nextTask = (tasks as any[]).find((task: any) => !completedTasks.includes(task.id));
 
   return (
     <TaskSelectionContainer>
@@ -349,10 +350,13 @@ const TaskSelection: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <TaskSelectionTitle>Handwriting Assessment Tasks</TaskSelectionTitle>
+            <TaskSelectionTitle>
+              {currentDisease === 'parkinsons' ? "Parkinson's" : "Alzheimer's"} Assessment Tasks
+            </TaskSelectionTitle>
             <TaskSelectionSubtitle>
-              Complete all 20 handwriting tasks to get a comprehensive cognitive assessment. 
-              Each task evaluates different aspects of cognitive function.
+              {currentDisease === 'parkinsons'
+                ? 'Complete all 10 drawing tasks to assess motor control and hand stability. Each task evaluates different motor skills.'
+                : 'Complete all 20 handwriting tasks to get a comprehensive cognitive assessment. Each task evaluates different aspects of cognitive function.'}
             </TaskSelectionSubtitle>
           </motion.div>
         </TaskSelectionHeader>
@@ -389,11 +393,16 @@ const TaskSelection: React.FC = () => {
           )}
         </ProgressSection>
 
-        {Object.entries(tasksByCategory).map(([category, tasks]) => (
+        {(Object.entries(tasksByCategory) as [string, any[]][]).map(([category, tasks]) => {
+          const categoryLabel = currentDisease === 'parkinsons' 
+            ? PARKINSONS_TASK_CATEGORIES[category as keyof typeof PARKINSONS_TASK_CATEGORIES]
+            : TASK_CATEGORIES[category as keyof typeof TASK_CATEGORIES];
+          
+          return (
           <CategorySection key={category}>
             <CategoryTitle>
               {getCategoryIcon(category)}
-              {TASK_CATEGORIES[category as keyof typeof TASK_CATEGORIES]} ({tasks.length} tasks)
+              {categoryLabel} ({tasks.length} tasks)
             </CategoryTitle>
             <TasksGrid>
               {tasks.map((task, index) => {
@@ -442,7 +451,8 @@ const TaskSelection: React.FC = () => {
               })}
             </TasksGrid>
           </CategorySection>
-        ))}
+        );
+        })}
       </div>
     </TaskSelectionContainer>
   );

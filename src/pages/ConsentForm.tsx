@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import { consentService } from '../services/consentService';
+import { useDisease } from '../context/DiseaseContext';
 
 const ConsentContainer = styled.div`
   padding: 20px 12px;
@@ -217,9 +218,11 @@ const ConsentFormPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentDisease } = useDisease();
   
-  // Get the original destination from the state
-  const from = location.state?.from?.pathname || '/tasks';
+  // Get the original destination from the state, or default by disease so post-consent goes to the right place
+  const defaultFrom = currentDisease === 'parkinsons' ? '/parkinsons' : '/alzheimers/tasks';
+  const from = (location.state as any)?.from?.pathname ?? (typeof (location.state as any)?.from === 'string' ? (location.state as any).from : null) ?? defaultFrom;
   
   // Load consent status on mount (for display purposes only)
   // IMPORTANT: Always start with checkbox unchecked - user must explicitly check it

@@ -20,6 +20,7 @@ import {
 
 import { useTaskCompletion } from '../hooks/useTaskCompletion';
 import { HANDWRITING_TASKS, getTasksForDisease } from '../data/handwritingTasks';
+import { PARKINSONS_TASKS } from '../data/parkinsonsTasks';
 import TaskProgressTracker from '../components/TaskProgressTracker';
 import DataExportPanel from '../components/DataExportPanel';
 import { getTestResults, getCompletedTaskIds } from '../services/resultsStorageService';
@@ -423,7 +424,7 @@ const Dashboard: React.FC = () => {
     };
 
     loadStats();
-  }, [user]);
+  }, [user, currentDisease]);
 
   // Get task status from Firebase data
   const getTaskStatus = (taskId: string) => {
@@ -449,9 +450,13 @@ const Dashboard: React.FC = () => {
   return (
     <DashboardContainer>
       <DashboardHeader>
-        <DashboardTitle>Dashboard</DashboardTitle>
+        <DashboardTitle>
+          {currentDisease === 'parkinsons' ? "Parkinson's" : "Alzheimer's"} Dashboard
+        </DashboardTitle>
         <DashboardSubtitle>
-          Track your progress and cognitive health
+          {currentDisease === 'parkinsons' 
+            ? 'Track your motor control assessment progress and cognitive patterns'
+            : 'Track your progress and cognitive health'}
         </DashboardSubtitle>
       </DashboardHeader>
 

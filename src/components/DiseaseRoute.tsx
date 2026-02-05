@@ -14,18 +14,17 @@ export const DiseaseRouteRedirect: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     const path = location.pathname;
     
-    // Update disease context if on awareness route
-    if (path === '/alzheimers') {
+    // Keep disease in sync with URL so dashboard/tasks always match the disease in the path
+    if (path.startsWith('/alzheimers')) {
       if (currentDisease !== 'alzheimers') {
         setDisease('alzheimers');
       }
-      return;
+      // If this is a Parkinson's-only route we shouldn't be here; otherwise continue for redirect logic
     }
-    if (path === '/parkinsons') {
+    if (path.startsWith('/parkinsons')) {
       if (currentDisease !== 'parkinsons') {
         setDisease('parkinsons');
       }
-      return;
     }
     
     // Skip if already disease-scoped or if it's a public route

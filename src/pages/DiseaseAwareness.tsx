@@ -5,11 +5,13 @@ import { motion } from 'framer-motion';
 import { Brain, AlertTriangle, FileText, Shield, ArrowRight, Info, Activity, Clock, Users, TrendingUp, CheckCircle2, Sparkles, Zap } from 'lucide-react';
 import { DiseaseType } from '../context/DiseaseContext';
 import { usePWAManifest } from '../hooks/usePWAManifest';
+import { useDisease } from '../context/DiseaseContext';
 import ParkinsonsInstallPrompt from '../components/ParkinsonsInstallPrompt';
 import DiseaseToggle from '../components/DiseaseToggle';
 import { useAuth } from '../context/AuthContext';
 import { consentService } from '../services/consentService';
 import { useStandalone } from '../hooks/useStandalone';
+import { PARKINSONS_TASKS } from '../data/parkinsonsTasks';
 
 // Disease-specific color schemes (both use same colors now)
 const ALZHEIMERS_COLORS = {
@@ -547,34 +549,36 @@ const DiseaseAwareness: React.FC<DiseaseAwarenessProps> = ({ disease }) => {
   const navigate = useNavigate();
   const [showModal, setShowModal] = React.useState(false);
   const { user } = useAuth();
+  const { setDisease } = useDisease();
   const isStandalone = useStandalone();
   
   // Load appropriate manifest based on disease
   usePWAManifest(disease);
 
   const handlePerformTest = async () => {
-    if (disease === 'alzheimers') {
-      const targetPath = '/alzheimers/tasks';
+    // persist the selected disease immediately so PWA manifest and routes
+    // reflect the user's choice before navigation/installation
+    setDisease(disease);
 
-      // Require sign-in before proceeding
-      if (!user) {
-        navigate('/login', { state: { from: targetPath } });
-        return;
-      }
+    const targetPath = disease === 'alzheimers' 
+      ? '/alzheimers/tasks'
+      : `/parkinsons/assessment-test/${PARKINSONS_TASKS[0].id}`;
 
-      // Require consent before entering PWA-required routes
-      const hasConsent = consentService.isConsentAcceptedSync();
-      if (!hasConsent) {
-        navigate('/consent', { state: { from: targetPath } });
-        return;
-      }
-
-      // User is signed in and consented; navigate into PWA-gated tasks flow
-      navigate(targetPath);
-    } else {
-      // Parkinson's - show coming soon modal
-      setShowModal(true);
+    // Require sign-in before proceeding (pass pathname so Login/Consent redirect back correctly)
+    if (!user) {
+      navigate('/login', { state: { from: { pathname: targetPath } } });
+      return;
     }
+
+    // Require consent before entering PWA-required routes
+    const hasConsent = consentService.isConsentAcceptedSync();
+    if (!hasConsent) {
+      navigate('/consent', { state: { from: { pathname: targetPath } } });
+      return;
+    }
+
+    // User is signed in and consented; navigate into assessment flow
+    navigate(targetPath);
   };
 
   const isAlzheimers = disease === 'alzheimers';
@@ -1041,7 +1045,7 @@ const DiseaseAwareness: React.FC<DiseaseAwarenessProps> = ({ disease }) => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              {isAlzheimers ? 'Perform Test' : 'View Screening Structure'}
+              {isAlzheimers ? 'Perform Test' : 'Start Assessment'}
               <ArrowRight size={20} />
             </PerformTestButton>
             {!isAlzheimers && (

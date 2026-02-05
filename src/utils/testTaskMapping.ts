@@ -8,16 +8,11 @@ import SquareDrawingTest from '../pages/tests/SquareDrawingTest';
 import TriangleDrawingTest from '../pages/tests/TriangleDrawingTest';
 import PentagonDrawingTest from '../pages/tests/PentagonDrawingTest';
 import SpiralDrawingTest from '../pages/tests/SpiralDrawingTest';
-import LetterCopyTest from '../pages/tests/LetterCopyTest';
 import WordMemoryTest from '../pages/tests/WordMemoryTest';
 import RepetitiveWritingTest from '../pages/tests/RepetitiveWritingTest';
 import DotConnectionTest from '../pages/tests/DotConnectionTest';
-import WordCopyTest from '../pages/tests/WordCopyTest';
-import NumberCopyTest from '../pages/tests/NumberCopyTest';
 import SentenceMemoryTest from '../pages/tests/SentenceMemoryTest';
 import SignaturePracticeTest from '../pages/tests/SignaturePracticeTest';
-import ComplexFigureCopyTest from '../pages/tests/ComplexFigureCopyTest';
-import LineTracingTest from '../pages/tests/LineTracingTest';
 import MazeNavigationTest from '../pages/tests/MazeNavigationTest';
 import PatternCompletionTest from '../pages/tests/PatternCompletionTest';
 import NameMemoryTest from '../pages/tests/NameMemoryTest';
@@ -34,16 +29,11 @@ export const TEST_TO_TASK_MAP: Record<string, string> = {
   'triangleDrawing': 'triangle_drawing',
   'pentagonDrawing': 'pentagon_drawing',
   'spiralDrawing': 'spiral_drawing',
-  'lineTracing': 'line_tracing',
   'clockDrawing': 'clock-drawing',
   'wordMemory': 'word_memory',
   'nameMemory': 'name_memory',
   'numberMemory': 'number_memory',
   'sentenceMemory': 'sentence_memory',
-  'letterCopy': 'letter_copy',
-  'wordCopy': 'word_copy',
-  'numberCopy': 'number_copy',
-  'complexFigureCopy': 'complex_figure_copy',
   'repetitiveWriting': 'repetitive_writing',
   'signaturePractice': 'signature_practice',
   'rapidWriting': 'rapid_writing',
@@ -64,18 +54,13 @@ const TASK_TO_COMPONENT_MAP: Record<string, React.ComponentType<any>> = {
   'triangle_drawing': TriangleDrawingTest,
   'pentagon_drawing': PentagonDrawingTest,
   'spiral_drawing': SpiralDrawingTest,
-  'letter_copy': LetterCopyTest,
   'word_memory': WordMemoryTest,
   'repetitive_writing': RepetitiveWritingTest,
   'dot_connection': DotConnectionTest,
   'maze_navigation': MazeNavigationTest,
   'pattern_completion': PatternCompletionTest,
-  'word_copy': WordCopyTest,
-  'number_copy': NumberCopyTest,
   'sentence_memory': SentenceMemoryTest,
   'signature_practice': SignaturePracticeTest,
-  'complex_figure_copy': ComplexFigureCopyTest,
-  'line_tracing': LineTracingTest,
   'name_memory': NameMemoryTest,
   'number_memory': NumberMemoryTest,
   'rapid_writing': RapidWritingTest,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../context/AuthContext';
+import { useDisease } from '../context/DiseaseContext';
 import { Brain, Mail, Lock, AlertCircle } from 'lucide-react';
 import { consentService } from '../services/consentService';
 import toast from 'react-hot-toast';
@@ -176,8 +177,10 @@ const Login: React.FC = () => {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentDisease } = useDisease();
 
-  const from = (location.state as any)?.from?.pathname || '/dashboard';
+  const defaultFrom = currentDisease === 'parkinsons' ? '/parkinsons' : '/alzheimers/dashboard';
+  const from = (location.state as any)?.from?.pathname ?? (typeof (location.state as any)?.from === 'string' ? (location.state as any).from : null) ?? defaultFrom;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

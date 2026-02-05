@@ -224,7 +224,6 @@ export async function getTaskCompletionStats(): Promise<{
   // Calculate total tasks per category (approximate)
   const categoryTotals = {
     'graphic': 5,
-    'copy': 5,
     'memory': 4,
     'spatial': 2,
     'motor': 3,

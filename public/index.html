@@ -16,7 +16,16 @@
       content="NeuroInk - Early detection of cognitive changes through AI-powered handwriting analysis"
     />
     <link rel="apple-touch-icon" href="./images/logo.png" />
-    <link rel="manifest" href="./manifest.json" />
+    <link id="app-manifest" rel="manifest" href="./manifest.json" />
+    <script>
+      (function() {
+        var path = window.location.pathname;
+        var link = document.getElementById('app-manifest');
+        if (link && path.indexOf('/parkinsons') === 0) {
+          link.href = '/manifest-parkinsons.json';
+        }
+      })();
+    </script>
     <title>NeuroInk - AI-Powered Cognitive Assessment</title>
   </head>
   <body>

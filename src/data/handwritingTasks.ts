@@ -6,7 +6,7 @@ import { DiseaseType } from '../context/DiseaseContext';
 export interface HandwritingTask {
   id: string;
   name: string;
-  category: 'graphic' | 'copy' | 'memory' | 'spatial' | 'motor';
+  category: 'graphic' | 'memory' | 'spatial' | 'motor';
   description: string;
   instructions: string[];
   expectedElements?: string[];
@@ -80,76 +80,6 @@ export const HANDWRITING_TASKS: HandwritingTask[] = [
     ],
     difficulty: 'medium',
     timeLimit: 45
-  },
-
-  // COPY TASKS (Visual-Motor Integration)
-  {
-    id: 'letter_copy',
-    name: 'Letter Copying',
-    category: 'copy',
-    description: 'Copy the letters: A B C D E',
-    instructions: [
-      'Copy each letter exactly as shown',
-      'Pay attention to size and spacing',
-      'Write clearly and legibly'
-    ],
-    expectedElements: ['A', 'B', 'C', 'D', 'E'],
-    difficulty: 'easy',
-    timeLimit: 60
-  },
-  {
-    id: 'word_copy',
-    name: 'Word Copying',
-    category: 'copy',
-    description: 'Copy the words: CAT DOG HOUSE',
-    instructions: [
-      'Copy each word exactly as shown',
-      'Maintain proper spacing between words',
-      'Keep letters the same size'
-    ],
-    expectedElements: ['CAT', 'DOG', 'HOUSE'],
-    difficulty: 'easy',
-    timeLimit: 60
-  },
-  {
-    id: 'number_copy',
-    name: 'Number Copying',
-    category: 'copy',
-    description: 'Copy the numbers: 1 2 3 4 5',
-    instructions: [
-      'Copy each number exactly as shown',
-      'Keep numbers evenly spaced',
-      'Make them clear and readable'
-    ],
-    expectedElements: ['1', '2', '3', '4', '5'],
-    difficulty: 'easy',
-    timeLimit: 45
-  },
-  {
-    id: 'complex_figure_copy',
-    name: 'Complex Figure Copy',
-    category: 'copy',
-    description: 'Copy the intersecting pentagons',
-    instructions: [
-      'Copy the figure exactly as shown',
-      'Pay attention to the intersection points',
-      'Keep proportions accurate'
-    ],
-    difficulty: 'hard',
-    timeLimit: 120
-  },
-  {
-    id: 'line_tracing',
-    name: 'Line Tracing',
-    category: 'copy',
-    description: 'Trace the wavy line',
-    instructions: [
-      'Follow the wavy line exactly',
-      'Stay on the line as closely as possible',
-      'Keep your movement smooth'
-    ],
-    difficulty: 'medium',
-    timeLimit: 30
   },
 
   // MEMORY TASKS (Working Memory & Recall)
@@ -325,7 +255,6 @@ export const HANDWRITING_TASKS: HandwritingTask[] = [
 
 export const TASK_CATEGORIES = {
   graphic: 'Graphic Tasks',
-  copy: 'Copy Tasks', 
   memory: 'Memory Tasks',
   spatial: 'Spatial Tasks',
   motor: 'Motor Tasks'
@@ -341,7 +270,6 @@ export const TASK_DIFFICULTY_LEVELS = {
 export type { DiseaseType };
 
 // Function to get tasks for a specific disease
-// Currently returns the same tasks for both diseases
 export function getTasksForDisease(disease: DiseaseType): HandwritingTask[] {
   return HANDWRITING_TASKS;
 }
