@@ -6,6 +6,7 @@ import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas'
 import TestHarness from '../../components/TestHarness';
 import { PARKINSONS_TASKS, PARKINSONS_TASK_CATEGORIES } from '../../data/parkinsonsTasks';
 import { analyzeTest } from '../../services/testAnalysisService';
+import { saveTestResult } from '../../services/resultsStorageService';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -297,8 +298,9 @@ const ParkinsonsAssessmentTest: React.FC = () => {
       const strokes = canvasRef.current?.getAllStrokes() ?? [];
       const canvasSize = canvasRef.current?.getCanvasSize() ?? { width: 0, height: 0 };
       const totalTimeMs = Math.max(1, timeElapsed * 1000);
+
       if (strokes.length && canvasSize.width && canvasSize.height) {
-        analyzeTest(
+        const analysis = analyzeTest(
           currentTask?.id ?? 'parkinsons_task',
           strokes,
           canvasSize,
@@ -306,7 +308,22 @@ const ParkinsonsAssessmentTest: React.FC = () => {
           undefined,
           'parkinsons'
         );
+
+        await saveTestResult(
+          {
+            testName: currentTask?.id ?? 'parkinsons_task',
+            taskId: currentTask?.id,
+            durationMs: totalTimeMs,
+            validation: null,
+            aiResult: analysis.aiResult,
+            features: analysis.features,
+            disease: 'parkinsons',
+          },
+          undefined,
+          'parkinsons'
+        );
       }
+
       setIsCompleted(true);
     } catch (error) {
       console.error('Error completing task:', error);
@@ -380,7 +397,7 @@ const ParkinsonsAssessmentTest: React.FC = () => {
             Research Mode
           </ResearchLabel>
           <ResearchText>
-            Parkinson's assessment uses its own model (placeholder). Results are for research only.
+            Parkinson's assessment uses the handwriting-based BLSTM research model from the PaHaW dataset. Results are for research only.
           </ResearchText>
         </ResearchBanner>
 

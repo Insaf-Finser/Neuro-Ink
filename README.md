@@ -1,164 +1,202 @@
-# NeuroInk - Cognitive Assessment via Handwriting Analysis
+# Neuro-Ink
 
-A comprehensive web application that uses AI-powered handwriting analysis to detect early signs of cognitive changes, particularly Alzheimer's disease. The app combines advanced machine learning with cognitive assessments to provide accurate, non-invasive screening.
+**Cognitive and motor assessment via AI-powered handwriting analysis.** A web application that uses machine learning to analyze handwriting dynamics for early screening of Alzheimer's disease and Parkinson's disease. Designed for research use on tablets and touch devices with stylus input.
+
+---
+
+## Overview
+
+Neuro-Ink captures **online handwriting** (x, y, pressure, timestamp over time) during drawing and writing tasks, extracts kinematic and temporal features, and runs disease-specific AI models to produce risk scores and biomarkers. Results are stored in Firebase and displayed in the assessment UI. The app supports two disease modes:
+
+| Disease | Model | Data Source | Key Metrics |
+|---------|-------|-------------|-------------|
+| **Alzheimer's** | LightGBM (DARWIN) | `src/models/*` | ~88.57% accuracy, ~96% AUC |
+| **Parkinson's** | BLSTM-style (PaHaW) | `parkmodel/Parkinsons-Detection` | ~68.3% val accuracy, ~70.5% AUC |
+
+---
 
 ## Features
 
 ### Core Functionality
-- **AI-Powered Handwriting Analysis**: Analyzes handwriting patterns, pressure, timing, and spatial relationships
-- **Comprehensive Cognitive Testing**: Four specialized tests designed to evaluate different cognitive functions
-- **Real-time Results**: Immediate analysis and probability scoring
-- **Privacy-First Design**: Encrypted data storage and strict privacy protocols
+- **AI-powered handwriting analysis** – Analyzes stroke patterns, pressure, timing, velocity, and spatial relationships
+- **Disease-specific flows** – Separate assessment paths for Alzheimer's and Parkinson's
+- **Real-time analysis** – On-device feature extraction and model inference
+- **Results storage** – Firebase Firestore + localStorage fallback, tagged by disease
 
-### Cognitive Tests
-1. **Clock Drawing Test**: Evaluates spatial cognition and executive function
-2. **Word Recall Test**: Assesses verbal memory and learning abilities
-3. **Image Association Test**: Tests visual memory and associative learning
-4. **Selection Memory Test**: Measures attention, working memory, and recognition
+### Alzheimer's Assessment
+- **20+ cognitive and motor tests** – Clock drawing, spiral drawing, word recall, image association, selection memory, maze navigation, pattern completion, and more
+- **LightGBM model** – Trained on DARWIN dataset, exported to JSON for web
+- **Biomarkers** – Pressure, spatial accuracy, temporal consistency, cognitive load
+
+### Parkinson's Assessment
+- **3 motor/coordination tasks** – Spiral drawing, line tracing, free writing
+- **PaHaW BLSTM-style model** – Calibrated from `parkmodel/Parkinsons-Detection` (PaHaW dataset)
+- **Motor biomarkers** – Pressure stability, spatial accuracy, temporal consistency, cognitive load
 
 ### User Experience
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **Accessibility Features**: WCAG 2.1 AA compliant with screen reader support
-- **Intuitive Interface**: Clean, modern design with clear instructions
-- **Progress Tracking**: Real-time status indicators and progress monitoring
+- **Responsive design** – Optimized for tablet and mobile
+- **Disease toggle** – Switch between Alzheimer's and Parkinson's modes
+- **PWA support** – Installable app for Parkinson's assessment
+- **Protected routes** – Login, consent, and mobile-only guards for tests
+
+---
 
 ## Technology Stack
 
-- **Frontend**: React 18 with TypeScript
-- **Styling**: Styled Components with CSS-in-JS
-- **Animations**: Framer Motion for smooth transitions
-- **Routing**: React Router DOM for navigation
-- **Canvas**: HTML5 Canvas for handwriting capture
-- **State Management**: React Hooks (useState, useEffect)
-- **Build Tool**: Create React App
+| Layer | Technologies |
+|-------|--------------|
+| **Frontend** | React 18, TypeScript, React Router |
+| **Styling** | Styled Components |
+| **Animations** | Framer Motion |
+| **Canvas** | HTML5 Canvas for stylus capture |
+| **Charts** | Recharts |
+| **Backend** | Firebase (Auth, Firestore, Hosting) |
+| **Build** | Create React App |
 
-## Getting Started
-
-### Prerequisites
-- Node.js (version 16 or higher)
-- npm or yarn package manager
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd neurodiagnosis-app
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Start the development server**
-   ```bash
-   npm start
-   ```
-
-4. **Open your browser**
-   Navigate to `http://localhost:3000` to view the application
-
-### Available Scripts
-
-- `npm start` - Runs the app in development mode
-- `npm build` - Builds the app for production
-- `npm test` - Launches the test runner
-- `npm eject` - Ejects from Create React App (one-way operation)
+---
 
 ## Project Structure
 
 ```
-src/
-├── components/
-│   └── Layout.tsx              # Main layout component with navigation
-├── pages/
-│   ├── Home.tsx                # Landing page with features and vision
-│   ├── Dashboard.tsx           # User dashboard and quick actions
-│   ├── Welcome.tsx             # Assessment introduction and instructions
-│   ├── ConsentForm.tsx         # Informed consent before testing
-│   ├── Results.tsx             # Results display with AI analysis
-│   ├── About.tsx              # About page with privacy policy and terms
-│   ├── Contact.tsx            # Contact page with support information
-│   └── tests/
-│       ├── ClockDrawingTest.tsx    # Clock drawing assessment
-│       ├── WordRecallTest.tsx      # Word memory test
-│       ├── ImageAssociationTest.tsx # Image-number association test
-│       └── SelectionMemoryTest.tsx   # Selection memory test
-├── App.tsx                     # Main app component with routing
-├── index.tsx                   # App entry point
-└── index.css                   # Global styles
+Neuro-Ink/
+├── src/
+│   ├── components/          # Layout, DrawingCanvas, TestHarness, DiseaseToggle, etc.
+│   ├── context/             # AuthContext, DiseaseContext, AppFlowContext
+│   ├── data/                # parkinsonsTasks, handwritingTasks
+│   ├── firebase.ts          # Firebase config
+│   ├── pages/
+│   │   ├── tests/           # 20+ Alzheimer's test components
+│   │   └── parkinsons/      # Parkinson's task selection, test, assessment, results
+│   ├── services/
+│   │   ├── analysis/        # AnalysisServiceFactory, AlzheimersAnalysisService, ParkinsonsAnalysisService
+│   │   ├── aiAnalysisService.ts   # LightGBM Alzheimer model
+│   │   ├── testAnalysisService.ts # Orchestrates analysis by disease
+│   │   ├── resultsStorageService.ts
+│   │   └── drawingValidationService.ts
+│   ├── models/              # LightGBM JSON models, scalers (Alzheimer's)
+│   └── App.tsx
+├── parkmodel/
+│   └── Parkinsons-Detection/  # PaHaW BLSTM notebooks, data, results_metrics.json
+├── training/                # Python scripts for LightGBM/DARWIN training
+├── web_models/             # Exported web-ready models
+├── public/
+├── firebase.json
+├── firestore.rules
+└── package.json
 ```
 
-## Key Features Explained
+---
 
-### Handwriting Analysis
-The application captures handwriting data including:
-- Stroke patterns and pressure
-- Drawing timing and velocity
-- Spatial relationships and proportions
-- Cognitive load indicators
+## Getting Started
 
-### AI Integration
-- Machine learning models trained on 50,000+ handwriting samples
-- Real-time biomarker detection
-- Probability scoring for cognitive changes
-- Continuous learning and model improvement
+### Prerequisites
+- Node.js 16+
+- npm or yarn
 
-### Privacy & Security
-- End-to-end encryption for all data
-- GDPR compliant data handling
-- Anonymized research data usage
-- User control over data retention
+### Installation
 
-## Assessment Process
+```bash
+git clone <repository-url>
+cd Neuro-Ink
+npm install
+```
 
-1. **Welcome & Instructions**: Clear explanation of the assessment process
-2. **Consent Form**: Informed consent with privacy information
-3. **Cognitive Tests**: Four specialized assessments
-4. **AI Analysis**: Real-time processing of handwriting data
-5. **Results**: Comprehensive report with recommendations
+### Environment
 
-## Browser Support
+Create a `.env` file in the project root with your Firebase config:
 
-- Chrome (recommended)
-- Firefox
-- Safari
-- Edge
-- Mobile browsers (iOS Safari, Chrome Mobile)
+```env
+REACT_APP_FIREBASE_API_KEY=your_api_key
+REACT_APP_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+REACT_APP_FIREBASE_PROJECT_ID=your_project_id
+REACT_APP_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+REACT_APP_FIREBASE_APP_ID=your_app_id
+REACT_APP_FIREBASE_MEASUREMENT_ID=your_measurement_id
+```
+
+### Run
+
+```bash
+npm start
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+### Build
+
+```bash
+npm run build
+```
+
+---
+
+## Key Routes
+
+| Path | Description |
+|------|-------------|
+| `/` | Home |
+| `/alzheimers` | Alzheimer's awareness & entry |
+| `/parkinsons` | Parkinson's awareness & entry |
+| `/login`, `/signup` | Auth |
+| `/consent` | Informed consent |
+| `/dashboard` | User dashboard (post-login) |
+| `/tasks` | Task selection (Alzheimer's) |
+| `/test/:taskId` | Individual Alzheimer's tests |
+| `/parkinsons/tests` | Parkinson's task selection |
+| `/parkinsons/test/:taskId` | Parkinson's simple test (UI demo) |
+| `/parkinsons/assessment-test/:taskId` | Parkinson's assessment (with AI analysis) |
+| `/parkinsons/assessment-results` | Parkinson's assessment summary |
+| `/results`, `/ai-analysis` | Alzheimer's results |
+| `/model-demo` | LightGBM model demo |
+
+---
+
+## AI Models
+
+### Alzheimer's (LightGBM)
+- **Source**: `src/models/lightgbm_model.json`, `lightgbm_scaler.json`
+- **Training**: `training/` Python scripts, DARWIN dataset
+- **Features**: Kinematics (velocity, acceleration, jerk), curvature, pauses, pressure
+- **Output**: Risk level (low/moderate/high), probability, biomarkers
+
+### Parkinson's (BLSTM-style)
+- **Source**: `parkmodel/Parkinsons-Detection/` (PaHaW dataset, BLSTM notebooks)
+- **Frontend**: `ParkinsonsAnalysisService` – on-device feature extraction and heuristic scoring calibrated to PaHaW metrics
+- **Features**: Path length, velocity, stroke/pause timing, pressure
+- **Output**: PD probability, risk level, motor biomarkers
+
+---
+
+## Firebase
+
+- **Auth**: User sign-in; guest fallback for unauthenticated use
+- **Firestore**: `users/{uid}/testResults` – stores `AIAnalysisResult`, features, metadata, disease tag
+- **Rules**: `firestore.rules`, `storage.rules`
+- **Deploy**: `firebase deploy`
+
+---
+
+## Medical Disclaimer
+
+**This application is for research and screening purposes only.** It does not provide medical diagnosis or treatment. Results should be interpreted by qualified healthcare professionals. Consult a neurologist or movement disorder specialist for formal assessment of Alzheimer's or Parkinson's disease.
+
+---
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create a feature branch (`git checkout -b feature/your-feature`)
+3. Commit changes (`git commit -m 'Add your feature'`)
+4. Push to the branch (`git push origin feature/your-feature`)
 5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Medical Disclaimer
-
-**Important**: This application is designed for screening purposes only and should not replace professional medical diagnosis or treatment. Results should be shared with healthcare professionals for proper interpretation and follow-up care.
-
-## Support
-
-For technical support or questions:
-- Email: support@neurodiagnosis.com
-- Phone: +1 (555) 123-4567
-- Documentation: [Link to documentation]
-
-## Roadmap
-
-- [ ] Enhanced AI model with improved accuracy
-- [ ] Multi-language support
-- [ ] Integration with healthcare systems
-- [ ] Mobile app development
-- [ ] Advanced analytics dashboard
-- [ ] Telemedicine integration
 
 ---
 
-Built with ❤️ for early detection and better cognitive health outcomes.
+## License
+
+MIT License – see the LICENSE file for details.
+
+---
+
+Built for early detection and better cognitive health outcomes.
