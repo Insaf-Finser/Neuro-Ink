@@ -3,9 +3,10 @@
 
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { taskCompletionService } from '../services/taskCompletionService';
+import { taskCompletionService, type NormalizedStroke } from '../services/taskCompletionService';
 import { getTasksForDisease } from '../data/handwritingTasks';
 import { useDisease } from '../context/DiseaseContext';
+import { StylusPoint } from '../services/stylusInputService';
 
 export interface TaskCompletionState {
   isCompleting: boolean;
@@ -15,11 +16,7 @@ export interface TaskCompletionState {
 export interface TaskCompletionData {
   taskId: string;
   elapsedTime: number;
-  strokes: Array<{
-    points: Array<{ x: number; y: number; pressure: number; timestamp: number; tiltX?: number; tiltY?: number; rotation?: number }>;
-    startTime: number;
-    endTime: number;
-  }>;
+  strokes: StylusPoint[][] | NormalizedStroke[];
   canvasSize: { width: number; height: number };
   userInteractions?: {
     pauseCount: number;
@@ -53,6 +50,7 @@ export const useTaskCompletion = () => {
         category: task.category,
         difficulty: task.difficulty,
         timeLimit: task.timeLimit || 0,
+        disease: currentDisease,
         elapsedTime: completionData.elapsedTime,
         strokes: completionData.strokes,
         canvasSize: completionData.canvasSize,
@@ -79,7 +77,7 @@ export const useTaskCompletion = () => {
     } finally {
       setIsCompleting(false);
     }
-  }, [isCompleting]);
+  }, [isCompleting, currentDisease]);
 
   const completeTaskAndNavigate = useCallback(async (
     completionData: TaskCompletionData,

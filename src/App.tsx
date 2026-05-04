@@ -1,4 +1,4 @@
-import React from 'react';
+ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -61,9 +61,11 @@ function App() {
           <Route path="/alzheimers" element={<DiseaseAwareness disease="alzheimers" />} />
           <Route path="/parkinsons" element={<DiseaseAwareness disease="parkinsons" />} />
           
-          {/* Parkinson's test routes (public, no PWA required, no analysis) - Mobile/Tablet only */}
-          <Route path="/parkinsons/tests" element={<MobileOnlyRoute><ParkinsonsTaskSelection /></MobileOnlyRoute>} />
-          <Route path="/parkinsons/test/:taskId" element={<MobileOnlyRoute><ParkinsonsTest /></MobileOnlyRoute>} />
+          {/* Parkinson's handwriting tasks: AI analysis + Firestore (same pattern as Alzheimer's tests) - Mobile/Tablet + PWA */}
+          <Route path="/parkinsons/tests" element={<ProtectedRoute><RequireConsent><MobileOnlyRoute><ParkinsonsTaskSelection /></MobileOnlyRoute></RequireConsent></ProtectedRoute>} />
+          <Route path="/parkinsons/test/:taskId" element={<ProtectedRoute><RequireConsent><MobileOnlyRoute><ParkinsonsTest /></MobileOnlyRoute></RequireConsent></ProtectedRoute>} />
+          <Route path="/parkinsons/ai-analysis" element={<ProtectedRoute><RequireConsent><AIAnalysisResults /></RequireConsent></ProtectedRoute>} />
+          <Route path="/parkinsons/cognitive-results" element={<ProtectedRoute><RequireConsent><Results /></RequireConsent></ProtectedRoute>} />
           
           {/* Parkinson's assessment routes (PWA-based, authenticated, unified) - Mobile/Tablet only */}
           <Route path="/parkinsons/assessment-test/:taskId" element={<ProtectedRoute><MobileOnlyRoute><AssessmentTest /></MobileOnlyRoute></ProtectedRoute>} />

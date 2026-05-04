@@ -2,6 +2,7 @@
 // Based on DARWIN dataset and clinical cognitive assessment protocols
 
 import { DiseaseType } from '../context/DiseaseContext';
+import { PARKINSONS_TASKS } from './parkinsonsTasks';
 
 export interface HandwritingTask {
   id: string;
@@ -269,7 +270,26 @@ export const TASK_DIFFICULTY_LEVELS = {
 // Re-export DiseaseType for convenience
 export type { DiseaseType };
 
+/** Parkinson's tasks from `parkinsonsTasks` mapped to the shared HandwritingTask shape */
+const PARKINSONS_HANDWRITING_TASKS: HandwritingTask[] = PARKINSONS_TASKS.map((t) => ({
+  id: t.id,
+  name: t.name,
+  category:
+    t.category === 'spatial'
+      ? 'spatial'
+      : t.category === 'coordination'
+        ? 'motor'
+        : 'motor',
+  description: t.description,
+  instructions: t.instructions,
+  difficulty: t.difficulty,
+  timeLimit: t.timeLimit
+}));
+
 // Function to get tasks for a specific disease
 export function getTasksForDisease(disease: DiseaseType): HandwritingTask[] {
+  if (disease === 'parkinsons') {
+    return PARKINSONS_HANDWRITING_TASKS;
+  }
   return HANDWRITING_TASKS;
 }

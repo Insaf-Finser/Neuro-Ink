@@ -120,14 +120,22 @@ export async function saveTestResult(
     }
   }
 
-  // Always save to localStorage for offline access and as cache/backup
-  const key = getUserKey(id);
-  const existing: StoredTestResult[] = JSON.parse(localStorage.getItem(key) || '[]');
-  const updated = [...existing, entry];
-  localStorage.setItem(key, JSON.stringify(updated));
+  // For authenticated users: store results in Firestore (source of truth).
+  // Only fall back to localStorage if Firestore fails.
+  // For guests: store in localStorage.
+  const shouldWriteLocal =
+    id === 'guest' ||
+    (!firestoreSaveSuccess && Boolean(user) && id !== 'guest');
+
+  if (shouldWriteLocal) {
+    const key = getUserKey(id);
+    const existing: StoredTestResult[] = JSON.parse(localStorage.getItem(key) || '[]');
+    const updated = [...existing, entry];
+    localStorage.setItem(key, JSON.stringify(updated));
+  }
 
   if (firestoreSaveSuccess) {
-    console.log(`Results synced to both Firestore and localStorage`);
+    console.log(`Results saved to Firestore`);
   } else if (user && id !== 'guest') {
     console.warn(`Results saved to localStorage only (Firestore sync failed for user ${user.uid})`);
   }
@@ -169,10 +177,6 @@ export async function getTestResults(userId?: string): Promise<StoredTestResult[
         });
       });
 
-      // Sync Firestore data to localStorage for offline access
-      const key = getUserKey(id);
-      localStorage.setItem(key, JSON.stringify(results));
-      
       console.log(`Fetched ${results.length} results from Firestore for user ${user.uid}`);
       return results;
     } catch (error) {

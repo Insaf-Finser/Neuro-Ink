@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
@@ -11,6 +11,7 @@ import {
   Beaker
 } from 'lucide-react';
 import { PARKINSONS_TASKS, PARKINSONS_TASK_CATEGORIES } from '../../data/parkinsonsTasks';
+import { getTestResults } from '../../services/resultsStorageService';
 
 const TaskSelectionContainer = styled.div`
   padding: 40px 0;
@@ -199,6 +200,26 @@ const TaskLink = styled(Link)`
 `;
 
 const ParkinsonsTaskSelection: React.FC = () => {
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    getTestResults()
+      .then((results) => {
+        if (cancelled) return;
+        const ids = new Set(
+          results
+            .filter((r) => (r.disease || 'alzheimers') === 'parkinsons' && r.taskId)
+            .map((r) => r.taskId as string)
+        );
+        setCompletedIds(ids);
+      })
+      .catch(() => setCompletedIds(new Set()));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const tasksByCategory = PARKINSONS_TASKS.reduce((acc, task) => {
     if (!acc[task.category]) {
       acc[task.category] = [];
@@ -218,11 +239,11 @@ const ParkinsonsTaskSelection: React.FC = () => {
           >
             <ResearchLabel>
               <Beaker size={16} />
-              Prototype / Research UI
+              Research assessment
             </ResearchLabel>
-            <TaskSelectionTitle>Parkinson's Screening Tasks</TaskSelectionTitle>
+            <TaskSelectionTitle>Parkinson's handwriting tasks</TaskSelectionTitle>
             <TaskSelectionSubtitle>
-              Motor and coordination assessment tasks (UI prototype only)
+              Full AI analysis and results — same pipeline as other NeuroInk handwriting assessments. Not a clinical diagnosis.
             </TaskSelectionSubtitle>
           </motion.div>
         </TaskSelectionHeader>
@@ -232,12 +253,11 @@ const ParkinsonsTaskSelection: React.FC = () => {
           <WarningContent>
             <WarningTitle>
               <AlertTriangle size={18} />
-              No Medical Analysis Performed
+              Screening only
             </WarningTitle>
             <WarningText>
-              These tasks are for research and prototype purposes only. No medical analysis, 
-              scoring, or diagnosis is performed. Data collected is not stored or analyzed. 
-              This is a UI demonstration only.
+              Results use research-grade AI models for screening and are saved to your signed-in account.
+              They do not replace a clinical evaluation by a qualified professional.
             </WarningText>
           </WarningContent>
         </WarningBanner>
@@ -253,6 +273,7 @@ const ParkinsonsTaskSelection: React.FC = () => {
                 <TaskCard
                   key={task.id}
                   $difficulty={task.difficulty.toLowerCase()}
+                  $completed={completedIds.has(task.id)}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}

@@ -1,10 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { RotateCcw, CheckCircle, AlertCircle, Clock, Beaker, Home } from 'lucide-react';
-import { StylusPoint } from '../../services/stylusInputService';
+import { RotateCcw, CheckCircle, AlertCircle, Clock, Home, Check } from 'lucide-react';
 import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
+import TestHarness from '../../components/TestHarness';
 import { PARKINSONS_TASKS } from '../../data/parkinsonsTasks';
+import { getTasksForDisease } from '../../data/handwritingTasks';
+import { ReferenceShapeConfig } from '../../utils/referenceShapes';
+import { useTaskCompletion } from '../../hooks/useTaskCompletion';
+import { getNextTaskId } from '../../utils/testTaskMapping';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -80,12 +84,14 @@ const Button = styled.button<{ $variant?: 'primary' | 'danger' | 'secondary' }>`
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
           box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+          &:disabled { opacity: 0.6; cursor: not-allowed; }
           &:active { transform: scale(0.98); }
         `;
       case 'danger':
         return `
           background: #ef4444;
           color: white;
+          &:disabled { opacity: 0.6; cursor: not-allowed; }
           &:active { transform: scale(0.98); }
         `;
       default:
@@ -93,6 +99,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'danger' | 'secondary' }>`
           background: white;
           color: #667eea;
           border: 2px solid #667eea;
+          &:disabled { opacity: 0.6; cursor: not-allowed; }
           &:active { transform: scale(0.98); }
         `;
     }
@@ -106,11 +113,11 @@ const StatusCard = styled.div<{ $status: 'waiting' | 'drawing' | 'completed' }>`
   padding: 14px 18px;
   border-radius: 12px;
   margin-bottom: 20px;
-  background: ${props => 
+  background: ${props =>
     props.$status === 'completed' ? '#f0fdf4' :
     props.$status === 'drawing' ? '#fef3c7' : '#f3f4f6'
   };
-  border: 2px solid ${props => 
+  border: 2px solid ${props =>
     props.$status === 'completed' ? '#10b981' :
     props.$status === 'drawing' ? '#f59e0b' : '#d1d5db'
   };
@@ -119,82 +126,128 @@ const StatusCard = styled.div<{ $status: 'waiting' | 'drawing' | 'completed' }>`
 const StatusText = styled.span<{ $status: string }>`
   font-weight: 600;
   font-size: 15px;
-  color: ${props => 
+  color: ${props =>
     props.$status === 'completed' ? '#059669' :
     props.$status === 'drawing' ? '#d97706' : '#6b7280'
   };
 `;
 
-const CompletionModal = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-`;
-
-const CompletionCard = styled.div`
-  background: white;
-  border-radius: 20px;
-  padding: 40px;
-  max-width: 500px;
-  width: 100%;
+const Timer = styled.div`
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #f8f9ff;
+  border-radius: 10px;
 `;
 
-const CompletionTitle = styled.h2`
-  font-size: 1.8rem;
+const TimerText = styled.div`
+  font-size: 18px;
   font-weight: 700;
-  color: #333;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
+  color: #667eea;
 `;
 
-const CompletionText = styled.p`
-  color: #666;
-  line-height: 1.6;
-  margin-bottom: 16px;
-`;
-
-const CompletionNote = styled.div`
-  background: #fef3c7;
-  border: 2px solid #f59e0b;
-  border-radius: 12px;
-  padding: 16px;
-  margin: 24px 0;
-  text-align: left;
-`;
-
-const CompletionNoteText = styled.p`
-  color: #92400e;
-  margin: 0;
-  line-height: 1.6;
-  font-size: 0.9rem;
-`;
+function referenceForTask(taskId: string): ReferenceShapeConfig | undefined {
+  switch (taskId) {
+    case 'spiral_drawing':
+      return { type: 'spiral' };
+    case 'line_tracing':
+      return { type: 'line' };
+    default:
+      return undefined;
+  }
+}
 
 const ParkinsonsTest: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
-  
-  const task = PARKINSONS_TASKS.find(t => t.id === taskId);
-  
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [strokes, setStrokes] = useState<StylusPoint[][]>([]);
-  const [startTime] = useState(Date.now());
-  const [showCompletion, setShowCompletion] = useState(false);
+  const { completeTask, isCompleting, completionError } = useTaskCompletion();
 
-  if (!task) {
+  const task = PARKINSONS_TASKS.find(t => t.id === taskId) ?? null;
+  const tasks = getTasksForDisease('parkinsons');
+  const hwTask = tasks.find(t => t.id === taskId) ?? null;
+  const taskIndex = tasks.findIndex(t => t.id === taskId);
+  const totalSteps = tasks.length;
+
+  const [hasStarted, setHasStarted] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [submitDone, setSubmitDone] = useState(false);
+  const submitStartedRef = useRef(false);
+
+  const runSubmit = useCallback(async () => {
+    if (!task || !hwTask) return;
+    if (submitDone || isCompleting || submitStartedRef.current) return;
+    submitStartedRef.current = true;
+    const strokes = canvasRef.current?.getAllStrokes() || [];
+    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
+
+    if (!strokes.length || canvasSize.width === 0) {
+      submitStartedRef.current = false;
+      return;
+    }
+
+    const elapsed = Math.max(1, timeElapsed || task.timeLimit || 1);
+
+    try {
+      await completeTask({
+        taskId: task.id,
+        elapsedTime: elapsed,
+        strokes,
+        canvasSize
+      });
+      setSubmitDone(true);
+      navigate('/parkinsons/ai-analysis', {
+        state: {
+          completionData: {
+            taskId: task.id,
+            taskName: task.name,
+            category: hwTask.category,
+            difficulty: task.difficulty,
+            elapsedTime: elapsed,
+            strokes,
+            canvasSize
+          }
+        }
+      });
+    } catch {
+      submitStartedRef.current = false;
+    }
+  }, [task, hwTask, submitDone, isCompleting, timeElapsed, completeTask, navigate]);
+
+  useEffect(() => {
+    if (!task?.timeLimit) return;
+    setTimeRemaining(task.timeLimit);
+  }, [task?.timeLimit, taskId]);
+
+  useEffect(() => {
+    submitStartedRef.current = false;
+  }, [taskId]);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | undefined;
+    if (hasStarted && timeRemaining !== null && timeRemaining > 0) {
+      interval = setInterval(() => {
+        setTimeElapsed(prev => prev + 1);
+        setTimeRemaining(prev => {
+          if (prev === null || prev <= 1) return 0;
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [hasStarted, timeRemaining]);
+
+  useEffect(() => {
+    if (timeRemaining === 0 && hasStarted && !submitDone) {
+      void runSubmit();
+    }
+  }, [timeRemaining, hasStarted, submitDone, runSubmit]);
+
+  if (!task || !hwTask) {
     return (
       <Container>
         <StatusCard $status="waiting">
@@ -202,152 +255,171 @@ const ParkinsonsTest: React.FC = () => {
           <StatusText $status="waiting">Task not found</StatusText>
         </StatusCard>
         <Controls>
-          <Button onClick={() => navigate('/parkinsons/tests')}>
-            Back to Tasks
-          </Button>
+          <Button onClick={() => navigate('/parkinsons/tests')}>Back to Tasks</Button>
         </Controls>
       </Container>
     );
   }
 
-  const handleStartDrawing = () => {
-    setIsDrawing(true);
-    if (canvasRef.current) {
-      canvasRef.current.clear();
+  const refShape = referenceForTask(task.id);
+
+  const handleCanvasTap = () => {
+    if (!hasStarted) {
+      setHasStarted(true);
+      setTimeRemaining(task.timeLimit ?? null);
     }
-    setStrokes([]);
   };
 
-  const handleClear = () => {
-    if (canvasRef.current) {
-      canvasRef.current.clear();
-    }
-    setStrokes([]);
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getStatus = (): 'waiting' | 'drawing' | 'completed' => {
+    if (submitDone) return 'completed';
+    if (timeRemaining === 0) return 'completed';
+    if (isDrawing) return 'drawing';
+    return 'waiting';
+  };
+
+  const handleSubmit = () => void runSubmit();
+
+  const clearCanvas = () => {
+    canvasRef.current?.clear();
+    setHasStarted(false);
     setIsDrawing(false);
+    setTimeElapsed(0);
+    setTimeRemaining(task.timeLimit ?? null);
+    setSubmitDone(false);
+    submitStartedRef.current = false;
   };
 
-  const handleComplete = () => {
-    // Collect strokes (but don't analyze or store)
-    const currentStrokes = canvasRef.current?.getAllStrokes() || [];
-    
-    // Discard data - this is UI only
-    console.log('Task completed (data discarded - UI prototype only)');
-    
-    setShowCompletion(true);
+  const handleHarnessNext = () => {
+    const nextId = getNextTaskId(task.id, 'parkinsons');
+    if (nextId) {
+      navigate(`/parkinsons/test/${nextId}`);
+    } else {
+      navigate('/parkinsons/cognitive-results');
+    }
   };
 
-  const handleBackToHome = () => {
-    navigate('/parkinsons');
-  };
-
-  const handleBackToTasks = () => {
-    navigate('/parkinsons/tests');
-  };
+  const instructions = (
+    <Instructions>
+      <InstructionText style={{ fontWeight: 700, marginBottom: 8 }}>{task.name}</InstructionText>
+      {task.instructions.map((instruction, index) => (
+        <InstructionText key={index}>• {instruction}</InstructionText>
+      ))}
+      {task.timeLimit != null && (
+        <InstructionText style={{ marginTop: 12, fontWeight: 700 }}>
+          <Clock size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
+          Time limit: {task.timeLimit} seconds
+        </InstructionText>
+      )}
+    </Instructions>
+  );
 
   return (
-    <>
-      <Container>
+    <Container>
+      <TestHarness
+        title={`${task.name} — Parkinson's`}
+        step={Math.max(1, taskIndex + 1)}
+        totalSteps={totalSteps}
+        instructions={instructions}
+        isComplete={submitDone}
+        onRetry={clearCanvas}
+        onNext={handleHarnessNext}
+        canProceed={submitDone && !isCompleting}
+      >
         <ResearchBanner>
           <ResearchLabel>
-            <Beaker size={18} />
-            Prototype / Research UI
+            <CheckCircle size={18} />
+            AI-assisted screening
           </ResearchLabel>
           <ResearchText>
-            No medical analysis performed. This is a UI demonstration only.
+            Your drawing is analyzed with the same on-device pipeline as other NeuroInk handwriting tasks.
+            Results are saved to your account. This is not a clinical diagnosis.
           </ResearchText>
         </ResearchBanner>
 
-        <Instructions>
-          <InstructionText style={{ fontWeight: 700, marginBottom: 12 }}>
-            {task.name}
-          </InstructionText>
-          {task.instructions.map((instruction, index) => (
-            <InstructionText key={index}>{instruction}</InstructionText>
-          ))}
-          {task.timeLimit && (
-            <InstructionText style={{ marginTop: 12, fontStyle: 'italic' }}>
-              <Clock size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
-              Time limit: {task.timeLimit} seconds
-            </InstructionText>
-          )}
-        </Instructions>
-
-        <StatusCard $status={isDrawing ? 'drawing' : 'waiting'}>
-          {isDrawing ? (
-            <>
-              <CheckCircle size={20} />
-              <StatusText $status="drawing">Drawing in progress...</StatusText>
-            </>
-          ) : (
-            <>
-              <AlertCircle size={20} />
-              <StatusText $status="waiting">Ready to start</StatusText>
-            </>
-          )}
+        <StatusCard $status={getStatus()}>
+          {getStatus() === 'completed' ? <CheckCircle size={20} /> : getStatus() === 'drawing' ? <AlertCircle size={20} /> : <Clock size={20} />}
+          <StatusText $status={getStatus()}>
+            {submitDone
+              ? 'Saved — review AI analysis.'
+              : timeRemaining === 0
+                ? 'Time is up — submitting…'
+                : isDrawing
+                  ? 'Drawing in progress…'
+                  : hasStarted
+                    ? 'Continue drawing…'
+                    : 'Tap the canvas to start'}
+          </StatusText>
         </StatusCard>
 
-        <DrawingCanvas
-          ref={canvasRef}
-          onStrokeStart={() => setIsDrawing(true)}
-          onStrokeEnd={(stroke) => {
-            setStrokes(prev => [...prev, stroke]);
-          }}
-        />
+        {completionError && (
+          <StatusCard $status="drawing">
+            <AlertCircle size={20} />
+            <StatusText $status="drawing">{completionError}</StatusText>
+          </StatusCard>
+        )}
 
-        <Controls>
-          {!isDrawing ? (
-            <Button $variant="primary" onClick={handleStartDrawing}>
-              Start Drawing
+        {hasStarted && task.timeLimit != null && (
+          <Timer>
+            <TimerText>
+              {formatTime(timeElapsed)} elapsed · {timeRemaining !== null ? `${formatTime(timeRemaining)} left` : ''}
+            </TimerText>
+          </Timer>
+        )}
+
+        <div style={{ position: 'relative' }}>
+          <DrawingCanvas
+            ref={canvasRef}
+            disabled={!hasStarted || submitDone}
+            placeholder={
+              !hasStarted
+                ? 'Tap canvas to start'
+                : submitDone
+                  ? 'Task complete'
+                  : 'Draw here…'
+            }
+            onTap={handleCanvasTap}
+            onStrokeStart={() => setIsDrawing(true)}
+            onStrokeEnd={() => setIsDrawing(false)}
+            referenceShape={refShape}
+          />
+        </div>
+
+        {hasStarted && !submitDone && timeRemaining !== 0 && (
+          <Controls>
+            <Button $variant="danger" onClick={clearCanvas} disabled={isCompleting}>
+              <RotateCcw size={16} />
+              Clear
             </Button>
-          ) : (
-            <>
-              <Button $variant="danger" onClick={handleClear}>
-                <RotateCcw size={16} />
-                Clear
-              </Button>
-              <Button $variant="primary" onClick={handleComplete}>
-                <CheckCircle size={16} />
-                Complete Task
-              </Button>
-            </>
-          )}
-          <Button onClick={() => navigate('/parkinsons/tests')}>
-            Back to Tasks
-          </Button>
-        </Controls>
-      </Container>
+            <Button $variant="primary" onClick={() => void handleSubmit()} disabled={isCompleting}>
+              <Check size={16} />
+              {isCompleting ? 'Analyzing…' : 'Done'}
+            </Button>
+            <Button onClick={() => navigate('/parkinsons/tests')} disabled={isCompleting}>
+              Back to tasks
+            </Button>
+          </Controls>
+        )}
 
-      {showCompletion && (
-        <CompletionModal onClick={() => setShowCompletion(false)}>
-          <CompletionCard onClick={(e) => e.stopPropagation()}>
-            <CompletionTitle>
-              <CheckCircle size={32} color="#10b981" />
-              Task Completed
-            </CompletionTitle>
-            <CompletionText>
-              You have successfully completed the {task.name} task.
-            </CompletionText>
-            <CompletionNote>
-              <CompletionNoteText>
-                <strong>Note:</strong> This is a prototype UI. No analysis, scoring, or data storage 
-                was performed. Medical analysis capabilities will be added in a future update.
-              </CompletionNoteText>
-            </CompletionNote>
-            <Controls style={{ marginTop: 24 }}>
-              <Button $variant="primary" onClick={handleBackToTasks}>
-                Back to Tasks
-              </Button>
-              <Button onClick={handleBackToHome}>
-                <Home size={16} />
-                Back to Home
-              </Button>
-            </Controls>
-          </CompletionCard>
-        </CompletionModal>
-      )}
-    </>
+        {submitDone && (
+          <Controls>
+            <Button $variant="primary" onClick={handleHarnessNext}>
+              {getNextTaskId(task.id, 'parkinsons') ? 'Next task' : 'View all results'}
+            </Button>
+            <Button onClick={() => navigate('/parkinsons')}>
+              <Home size={16} />
+              Home
+            </Button>
+          </Controls>
+        )}
+      </TestHarness>
+    </Container>
   );
 };
 
 export default ParkinsonsTest;
-

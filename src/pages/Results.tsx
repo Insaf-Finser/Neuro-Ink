@@ -12,9 +12,12 @@ import {
   Calendar
 } from 'lucide-react';
 
-import { sessionStorageService } from '../services/sessionStorageService';
-import { HANDWRITING_TASKS, getTasksForDisease } from '../data/handwritingTasks';
+import { HANDWRITING_TASKS } from '../data/handwritingTasks';
+import SHAPVisualization from '../components/SHAPVisualization';
+import { getTestResults, StoredTestResult } from '../services/resultsStorageService';
 import { useDisease } from '../context/DiseaseContext';
+
+const DISEASE_LABEL = "Alzheimer's";
 
 const ResultsContainer = styled.div`
   padding: 40px 0;
@@ -240,9 +243,39 @@ const MetricValue = styled.div`
   color: #333;
 `;
 
+const DiseasePredictionCard = styled.div<{ $positive: boolean }>`
+  background: ${props => props.$positive ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' : 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)'};
+  border: 2px solid ${props => props.$positive ? '#f59e0b' : '#10b981'};
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+  text-align: center;
+`;
+
+const DiseasePredictionTitle = styled.h2`
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 8px 0;
+`;
+
+const DiseasePredictionResult = styled.div<{ $positive: boolean }>`
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: ${props => props.$positive ? '#92400e' : '#065f46'};
+  margin-bottom: 8px;
+`;
+
+const DiseasePredictionSub = styled.p`
+  font-size: 0.95rem;
+  color: #666;
+  margin: 0;
+`;
+
 
 const Results: React.FC = () => {
-  const [sessions, setSessions] = useState<any[]>([]);
+  const { currentDisease } = useDisease();
+  const [sessions, setSessions] = useState<StoredTestResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [overallStats, setOverallStats] = useState({
     totalSessions: 0,
@@ -254,23 +287,42 @@ const Results: React.FC = () => {
   useEffect(() => {
     const loadSessions = async () => {
       try {
-        const allSessions = await sessionStorageService.getSessions();
-        const completedSessions = allSessions.filter(session => session.completed);
-        
-        setSessions(completedSessions);
+        const allResults = await getTestResults();
+        const disease = currentDisease || 'alzheimers';
+        const diseaseResults = allResults.filter(r => (r.disease || 'alzheimers') === disease);
+
+        // Deduplicate by taskId so re-taking the same task doesn't inflate counts.
+        // Keep the most recent completion for each task (by completedAt).
+        const latestByTaskId = new Map<string, StoredTestResult>();
+        for (const r of diseaseResults) {
+          if (!r.taskId) continue;
+          const existing = latestByTaskId.get(r.taskId);
+          const rTime = Date.parse(r.completedAt) || 0;
+          const existingTime = existing ? (Date.parse(existing.completedAt) || 0) : 0;
+          if (!existing || rTime > existingTime) {
+            latestByTaskId.set(r.taskId, r);
+          }
+        }
+
+        const uniqueCompletedSessions = Array.from(latestByTaskId.values()).sort(
+          (a, b) => (Date.parse(b.completedAt) || 0) - (Date.parse(a.completedAt) || 0)
+        );
+
+        setSessions(uniqueCompletedSessions);
 
         // Calculate overall statistics
-        const totalSessions = completedSessions.length;
-        const scores = completedSessions
-          .map(session => session.results?.probability || 0)
+        const totalSessions = uniqueCompletedSessions.length;
+        const scores = uniqueCompletedSessions
+          .map(r => (r.aiResult?.probability ?? 0))
+          .map(p => (p > 1 ? p : p * 100)) // supports both 0-1 and 0-100 representations
           .filter(score => score > 0);
         const averageScore = scores.length > 0 
           ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
           : 0;
 
         // Calculate risk distribution
-        const riskDistribution = completedSessions.reduce((acc, session) => {
-          const risk = session.results?.overallRisk || 'unknown';
+        const riskDistribution = uniqueCompletedSessions.reduce((acc, session) => {
+          const risk = session.aiResult?.overallRisk || 'unknown';
           if (risk === 'low') acc.low++;
           else if (risk === 'moderate') acc.moderate++;
           else if (risk === 'high') acc.high++;
@@ -291,7 +343,7 @@ const Results: React.FC = () => {
     };
 
     loadSessions();
-  }, []);
+  }, [currentDisease]);
 
   const getTaskName = (taskId: string) => {
     const task = HANDWRITING_TASKS.find(t => t.id === taskId);
@@ -307,6 +359,8 @@ const Results: React.FC = () => {
       default: return <Target size={20} color="#6b7280" />;
     }
   };
+
+  const diseasePredictionPositive = sessions.some(s => s.aiResult?.overallRisk === 'high');
 
 
 
@@ -393,6 +447,23 @@ const Results: React.FC = () => {
         </ResultsHeader>
 
         <ResultsContent>
+          {/* Disease prediction */}
+          <DiseasePredictionCard $positive={diseasePredictionPositive}>
+            <DiseasePredictionTitle>Disease prediction</DiseasePredictionTitle>
+            <DiseasePredictionResult $positive={diseasePredictionPositive}>
+              {diseasePredictionPositive
+                ? `Possible signs of ${DISEASE_LABEL} risk indicated`
+                : `No signs of ${DISEASE_LABEL} detected`
+              }
+            </DiseasePredictionResult>
+            <DiseasePredictionSub>
+              {diseasePredictionPositive
+                ? `Based on your tasks, the model suggests possible risk (${overallStats.averageScore}% average probability). This is not a diagnosis — please discuss with a healthcare provider.`
+                : `Based on your completed tasks, the model did not detect significant signs of ${DISEASE_LABEL}. This is screening only, not a diagnosis.`
+              }
+            </DiseasePredictionSub>
+          </DiseasePredictionCard>
+
           {/* Overall Statistics */}
           <StatsSection>
             <StatsTitle>Assessment Overview</StatsTitle>
@@ -447,32 +518,43 @@ const Results: React.FC = () => {
                     <TaskMeta>
                       <TaskDate>
                         <Calendar size={16} />
-                        {new Date(session.timestamp).toLocaleDateString()}
+                        {new Date(session.completedAt).toLocaleDateString()}
                       </TaskDate>
-                      <TaskScore $risk={session.results?.overallRisk || 'unknown'}>
-                        {getRiskIcon(session.results?.overallRisk || 'unknown')}
-                        {session.results?.overallRisk?.toUpperCase() || 'UNKNOWN'}
+                      <TaskScore $risk={session.aiResult?.overallRisk || 'unknown'}>
+                        {getRiskIcon(session.aiResult?.overallRisk || 'unknown')}
+                        {session.aiResult?.overallRisk?.toUpperCase() || 'UNKNOWN'}
                       </TaskScore>
                     </TaskMeta>
                   </TaskHeader>
                   <TaskDetails>
                     <TaskMetric>
                       <MetricLabel>Risk Probability</MetricLabel>
-                      <MetricValue>{session.results?.probability || 0}%</MetricValue>
+                      <MetricValue>
+                        {Math.round(
+                          (session.aiResult?.probability ?? 0) > 1
+                            ? (session.aiResult?.probability ?? 0)
+                            : (session.aiResult?.probability ?? 0) * 100
+                        )}%
+                      </MetricValue>
                     </TaskMetric>
                     <TaskMetric>
                       <MetricLabel>Pressure Score</MetricLabel>
-                      <MetricValue>{session.results?.biomarkers?.pressure || 0}%</MetricValue>
+                      <MetricValue>{Math.round((session.aiResult?.biomarkers?.pressure ?? 0) * 100)}%</MetricValue>
                     </TaskMetric>
                     <TaskMetric>
                       <MetricLabel>Spatial Accuracy</MetricLabel>
-                      <MetricValue>{session.results?.biomarkers?.spatialAccuracy || 0}%</MetricValue>
+                      <MetricValue>{Math.round((session.aiResult?.biomarkers?.spatialAccuracy ?? 0) * 100)}%</MetricValue>
                     </TaskMetric>
                   </TaskDetails>
                 </TaskResult>
               ))}
             </TasksList>
           </TasksSection>
+
+          {/* SHAP visualizations */}
+          <div style={{ marginTop: '48px' }}>
+            <SHAPVisualization />
+          </div>
         </ResultsContent>
       </div>
     </ResultsContainer>

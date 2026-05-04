@@ -426,7 +426,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isStandalone = useStandalone();
   const { user, signOut, loading: authLoading } = useAuth();
   const { currentDisease, setDisease } = useDisease();
-  usePWAManifest(currentDisease);
+  const routeDisease = location.pathname.startsWith('/parkinsons')
+    ? 'parkinsons'
+    : location.pathname.startsWith('/alzheimers')
+      ? 'alzheimers'
+      : null;
+  const effectiveDisease = routeDisease ?? currentDisease;
+  usePWAManifest(effectiveDisease);
   const [consentAccepted, setConsentAccepted] = useState<boolean | null>(null);
   const [consentLoading, setConsentLoading] = useState(true);
 
@@ -628,8 +634,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Detect mismatch between installed PWA (which may have been installed for a different disease)
   // and the current route/disease. If mismatch, show a small reinstall prompt.
-  const routeDisease = location.pathname.startsWith('/parkinsons') ? 'parkinsons' :
-                        location.pathname.startsWith('/alzheimers') ? 'alzheimers' : null;
   const persisted = (typeof window !== 'undefined') ? localStorage.getItem('selectedDisease') as 'alzheimers' | 'parkinsons' | null : null;
   const installMismatch = isStandalone && routeDisease && persisted && persisted !== routeDisease;
 

@@ -37,6 +37,10 @@ export function routeRequiresPWA(pathname: string): boolean {
     '/alzheimers/ai-analysis',
     '/alzheimers/comprehensive-results',
     '/alzheimers/test/',
+    '/parkinsons/tests',
+    '/parkinsons/test/',
+    '/parkinsons/ai-analysis',
+    '/parkinsons/cognitive-results',
     '/parkinsons/assessment-test/',
     '/parkinsons/assessment-results',
     // Old routes that redirect to Alzheimer's test routes

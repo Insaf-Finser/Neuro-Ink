@@ -24,6 +24,7 @@ import {
 import AIAnalysisDisplay from '../components/AIAnalysisDisplay';
 import { enhancedAIAnalysisService, EnhancedAIAnalysisResult } from '../services/enhancedAIAnalysisService';
 import { HandwritingData } from '../services/aiAnalysisService';
+import { useDisease } from '../context/DiseaseContext';
 
 const ResultsContainer = styled.div`
   padding: 40px 0;
@@ -295,9 +296,39 @@ const ErrorMessage = styled.p`
   margin-bottom: 16px;
 `;
 
+const DiseasePredictionCard = styled.div<{ $positive: boolean }>`
+  background: ${props => props.$positive ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' : 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)'};
+  border: 2px solid ${props => props.$positive ? '#f59e0b' : '#10b981'};
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+  text-align: center;
+`;
+
+const DiseasePredictionTitle = styled.h2`
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 8px 0;
+`;
+
+const DiseasePredictionResult = styled.div<{ $positive: boolean }>`
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: ${props => props.$positive ? '#92400e' : '#065f46'};
+  margin-bottom: 8px;
+`;
+
+const DiseasePredictionSub = styled.p`
+  font-size: 0.95rem;
+  color: #666;
+  margin: 0;
+`;
+
 const AIAnalysisResults: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentDisease } = useDisease();
   const [analysis, setAnalysis] = useState<EnhancedAIAnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -383,7 +414,11 @@ const AIAnalysisResults: React.FC = () => {
   };
 
   const handleNewAssessment = () => {
-    navigate('/tasks');
+    if (currentDisease === 'parkinsons') {
+      navigate('/parkinsons/tests');
+    } else {
+      navigate('/tasks');
+    }
   };
 
   if (loading) {
@@ -409,7 +444,7 @@ const AIAnalysisResults: React.FC = () => {
           <ErrorContainer>
             <ErrorTitle>Analysis Failed</ErrorTitle>
             <ErrorMessage>{error}</ErrorMessage>
-            <ActionButton onClick={() => navigate('/tasks')}>
+            <ActionButton onClick={() => navigate(currentDisease === 'parkinsons' ? '/parkinsons/tests' : '/tasks')}>
               <ArrowLeft size={16} />
               Back to Tasks
             </ActionButton>
@@ -426,7 +461,7 @@ const AIAnalysisResults: React.FC = () => {
           <ErrorContainer>
             <ErrorTitle>No Analysis Available</ErrorTitle>
             <ErrorMessage>Unable to load analysis results.</ErrorMessage>
-            <ActionButton onClick={() => navigate('/tasks')}>
+            <ActionButton onClick={() => navigate(currentDisease === 'parkinsons' ? '/parkinsons/tests' : '/tasks')}>
               <ArrowLeft size={16} />
               Back to Tasks
             </ActionButton>
@@ -459,6 +494,23 @@ const AIAnalysisResults: React.FC = () => {
             </ActionButton>
           </ActionButtons>
         </ResultsHeader>
+
+        {/* Disease prediction */}
+        <DiseasePredictionCard $positive={analysis.overallRisk === 'high'}>
+          <DiseasePredictionTitle>Disease prediction</DiseasePredictionTitle>
+          <DiseasePredictionResult $positive={analysis.overallRisk === 'high'}>
+            {analysis.overallRisk === 'high'
+              ? 'Possible signs of cognitive change risk indicated'
+              : 'No signs of cognitive change detected'
+            }
+          </DiseasePredictionResult>
+          <DiseasePredictionSub>
+            {analysis.overallRisk === 'high'
+              ? `Model probability: ${Math.round(analysis.probability)}%. This is not a diagnosis — please discuss with a healthcare provider.`
+              : `Model probability: ${Math.round(analysis.probability)}%. This is screening only, not a diagnosis.`
+            }
+          </DiseasePredictionSub>
+        </DiseasePredictionCard>
 
         {/* Main AI Analysis Display */}
         <AIAnalysisDisplay 

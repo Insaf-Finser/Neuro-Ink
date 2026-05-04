@@ -1,13 +1,19 @@
 // Task Completion Service
 // Handles task completion, data saving, and AI analysis integration
 
-import { sessionStorageService } from './sessionStorageService';
 import { enhancedAIAnalysisService, EnhancedAIAnalysisResult } from './enhancedAIAnalysisService';
 import { AnalysisServiceFactory } from './analysis/AnalysisServiceFactory';
 import { getTasksForDisease } from '../data/handwritingTasks';
 import { DiseaseType } from '../context/DiseaseContext';
 import { saveTestResult } from './resultsStorageService';
 import { getTestNameFromTaskId } from '../utils/testTaskMapping';
+import { StylusPoint } from './stylusInputService';
+
+export type NormalizedStroke = {
+  points: StylusPoint[];
+  startTime: number;
+  endTime: number;
+};
 
 export interface TaskCompletionData {
   taskId: string;
@@ -16,17 +22,38 @@ export interface TaskCompletionData {
   difficulty: string;
   timeLimit: number;
   elapsedTime: number;
-  strokes: Array<{
-    points: Array<{ x: number; y: number; pressure: number; timestamp: number; tiltX?: number; tiltY?: number; rotation?: number }>;
-    startTime: number;
-    endTime: number;
-  }>;
+  disease?: DiseaseType;
+  /** Raw paths from DrawingCanvas (`StylusPoint[][]`) or pre-shaped stroke records */
+  strokes: StylusPoint[][] | NormalizedStroke[];
   canvasSize: { width: number; height: number };
   userInteractions?: {
     pauseCount: number;
     clearCount: number;
     undoCount: number;
   };
+}
+
+/** After `normalizeStrokesInput`, strokes are always `{ points, startTime, endTime }[]`. */
+export type TaskCompletionNormalized = Omit<TaskCompletionData, 'strokes'> & {
+  strokes: NormalizedStroke[];
+};
+
+function normalizeStrokesInput(strokes: TaskCompletionData['strokes']): NormalizedStroke[] {
+  if (!strokes.length) return [];
+  const first = strokes[0] as StylusPoint[] | NormalizedStroke;
+  if (Array.isArray(first)) {
+    return (strokes as StylusPoint[][]).map((stroke) => {
+      if (!stroke.length) {
+        return { points: [], startTime: 0, endTime: 0 };
+      }
+      return {
+        points: stroke,
+        startTime: stroke[0].timestamp,
+        endTime: stroke[stroke.length - 1].timestamp
+      };
+    });
+  }
+  return strokes as NormalizedStroke[];
 }
 
 export interface TaskCompletionResult {
@@ -47,9 +74,15 @@ class TaskCompletionService {
   async completeTask(completionData: TaskCompletionData): Promise<TaskCompletionResult> {
     try {
       console.log(`Completing task: ${completionData.taskId}`);
+      const disease: DiseaseType = completionData.disease || 'alzheimers';
+
+      const data: TaskCompletionNormalized = {
+        ...completionData,
+        strokes: normalizeStrokesInput(completionData.strokes)
+      };
       
       // Validate completion data
-      const validation = this.validateCompletionData(completionData);
+      const validation = this.validateCompletionData(data);
       if (!validation.isValid) {
         return {
           success: false,
@@ -59,15 +92,15 @@ class TaskCompletionService {
 
       // Perform enhanced AI analysis if enabled and conditions are met
       let aiAnalysis = null;
-      if (this.AI_ANALYSIS_ENABLED && this.shouldPerformAIAnalysis(completionData)) {
+      if (this.AI_ANALYSIS_ENABLED && this.shouldPerformAIAnalysis(data)) {
         try {
           console.log('Performing enhanced AI analysis...');
-          aiAnalysis = await this.performEnhancedAIAnalysis(completionData);
+          aiAnalysis = await this.performEnhancedAIAnalysis(data);
           console.log('Enhanced AI analysis completed:', aiAnalysis);
         } catch (error) {
           console.warn('Enhanced AI analysis failed, falling back to basic analysis:', error);
           try {
-            aiAnalysis = await this.performAIAnalysis(completionData);
+            aiAnalysis = await this.performAIAnalysis(data);
           } catch (fallbackError) {
             console.warn('Basic AI analysis also failed:', fallbackError);
             // Continue without AI analysis rather than failing the entire completion
@@ -75,55 +108,14 @@ class TaskCompletionService {
         }
       }
 
-      // Prepare session data
-      const sessionData = {
-        taskName: completionData.taskName,
-        category: completionData.category,
-        difficulty: completionData.difficulty,
-        timeLimit: completionData.timeLimit,
-        elapsedTime: completionData.elapsedTime,
-        strokes: completionData.strokes,
-        results: aiAnalysis ? {
-          overallRisk: 'overallRisk' in aiAnalysis ? aiAnalysis.overallRisk : (aiAnalysis.darwinRiskLevel || 'low'),
-          probability: 'probability' in aiAnalysis ? aiAnalysis.probability : (aiAnalysis.darwinPrediction || 0.5),
-          testScores: 'testScores' in aiAnalysis ? aiAnalysis.testScores : {
-            clockDrawing: 0.8,
-            wordRecall: 0.8,
-            imageAssociation: 0.8,
-            selectionMemory: 0.8
-          },
-          biomarkers: 'biomarkers' in aiAnalysis ? aiAnalysis.biomarkers : {
-            pressure: aiAnalysis.pressure,
-            spatialAccuracy: aiAnalysis.spatialAccuracy,
-            temporalConsistency: aiAnalysis.temporalConsistency,
-            cognitiveLoad: aiAnalysis.cognitiveLoad
-          },
-          recommendations: 'recommendations' in aiAnalysis ? aiAnalysis.recommendations : [
-            'Continue regular cognitive assessments',
-            'Maintain healthy lifestyle habits',
-            'Engage in mentally stimulating activities'
-          ]
-        } : undefined,
-        aiAnalysis: aiAnalysis ? {
-          modelVersion: 'overallRisk' in aiAnalysis ? '3.0.0-LightGBM-Enhanced' : '3.0.0-LightGBM',
-          confidence: 'probability' in aiAnalysis ? aiAnalysis.probability : (aiAnalysis.darwinPrediction || 0.5),
-          features: this.extractFeatureNames(completionData),
-          analysisTimestamp: Date.now(),
-          enhancedAnalysis: 'overallRisk' in aiAnalysis ? aiAnalysis : undefined
-        } : undefined
-      };
-
-      // Save to session storage
-      await sessionStorageService.markTaskCompleted(completionData.taskId, sessionData);
-
       // Also save to Firestore via resultsStorageService
       try {
-        const testName = getTestNameFromTaskId(completionData.taskId) || completionData.taskId;
+        const testName = getTestNameFromTaskId(data.taskId) || data.taskId;
         await saveTestResult(
           {
             testName,
-            taskId: completionData.taskId,
-            durationMs: completionData.elapsedTime * 1000, // elapsedTime is in seconds, convert to milliseconds
+            taskId: data.taskId,
+            durationMs: data.elapsedTime * 1000, // elapsedTime is in seconds, convert to milliseconds
             validation: undefined,
             aiResult: aiAnalysis ? {
               overallRisk: 'overallRisk' in aiAnalysis ? aiAnalysis.overallRisk : (aiAnalysis.darwinRiskLevel || 'low'),
@@ -142,21 +134,21 @@ class TaskCompletionService {
               },
               recommendations: 'recommendations' in aiAnalysis ? aiAnalysis.recommendations : []
             } : undefined,
-            features: this.extractFeatureNames(completionData)
+            features: this.extractFeatureNames(data)
           },
           undefined, // userId will be determined by saveTestResult
-          'alzheimers' // Default to alzheimers for now
+          disease
         );
-        console.log(`Test result saved to Firestore for task: ${completionData.taskId}`);
+        console.log(`Test result saved to Firestore for task: ${data.taskId}`);
       } catch (error) {
         console.error('Error saving test result to Firestore:', error);
         // Don't fail the entire completion if Firestore save fails
       }
 
       // Generate session ID
-      const sessionId = `task_${completionData.taskId}_${Date.now()}`;
+      const sessionId = `task_${data.taskId}_${Date.now()}`;
 
-      console.log(`Task completed successfully: ${completionData.taskId}`);
+      console.log(`Task completed successfully: ${data.taskId}`);
 
       return {
         success: true,
@@ -177,48 +169,62 @@ class TaskCompletionService {
    * Get task completion statistics
    */
   async getCompletionStats() {
-    return await sessionStorageService.getTaskCompletionStats();
+    // Firestore is the source of truth; session stats are computed in UI from Firestore results.
+    // This method remains for backward compatibility but no longer returns IndexedDB stats.
+    return {
+      totalTasks: 0,
+      completedTasks: 0,
+      completionRate: 0,
+      averageScore: 0,
+      riskDistribution: {},
+      categoryStats: {},
+      recentCompletions: []
+    };
   }
 
   /**
    * Get progress for a specific task
    */
   async getTaskProgress(taskId: string) {
-    return await sessionStorageService.getTaskProgress(taskId);
+    return {
+      isCompleted: false,
+      progress: 0
+    };
   }
 
   /**
    * Get all completed sessions for a category
    */
   async getCompletedSessionsByCategory(category: string) {
-    return await sessionStorageService.getCompletedSessionsByCategory(category);
+    return [];
   }
 
   /**
    * Export completed sessions as CSV
    */
   async exportSessionsAsCSV(): Promise<Blob> {
-    return await sessionStorageService.exportSessionsAsCSV();
+    return new Blob(['Firestore is the source of truth; export via Firestore results.'], { type: 'text/plain' });
   }
 
   /**
    * Export completed sessions as JSON
    */
   async exportSessionsAsJSON(): Promise<Blob> {
-    return await sessionStorageService.exportSessions();
+    return new Blob(['Firestore is the source of truth; export via Firestore results.'], { type: 'text/plain' });
   }
 
   /**
    * Clear all completed sessions
    */
   async clearCompletedSessions(): Promise<void> {
-    return await sessionStorageService.clearCompletedSessions();
+    // Intentionally a no-op here; use resultsStorageService.clearTestResults() for Firestore.
+    return;
   }
 
   /**
    * Validate task completion data
    */
-  private validateCompletionData(data: TaskCompletionData): { isValid: boolean; error?: string } {
+  private validateCompletionData(data: TaskCompletionNormalized): { isValid: boolean; error?: string } {
     if (!data.taskId || !data.taskName) {
       return { isValid: false, error: 'Missing required task information' };
     }
@@ -231,8 +237,9 @@ class TaskCompletionService {
       return { isValid: false, error: 'Drawing time too short for meaningful analysis' };
     }
 
-    // Check if task exists in our task list (use disease-aware lookup, defaults to 'alzheimers')
-    const tasks = getTasksForDisease('alzheimers');
+    // Check if task exists in our task list (use disease-aware lookup)
+    const disease: DiseaseType = data.disease || 'alzheimers';
+    const tasks = getTasksForDisease(disease);
     const task = tasks.find(t => t.id === data.taskId);
     if (!task) {
       return { isValid: false, error: 'Invalid task ID' };
@@ -244,7 +251,7 @@ class TaskCompletionService {
   /**
    * Determine if AI analysis should be performed
    */
-  private shouldPerformAIAnalysis(data: TaskCompletionData): boolean {
+  private shouldPerformAIAnalysis(data: TaskCompletionNormalized): boolean {
     // Check minimum requirements for AI analysis
     const hasEnoughStrokes = data.strokes.length >= this.MIN_STROKES_FOR_ANALYSIS;
     const hasEnoughTime = data.elapsedTime >= this.MIN_DRAWING_TIME;
@@ -258,7 +265,7 @@ class TaskCompletionService {
   /**
    * Perform enhanced AI analysis on completed task
    */
-  private async performEnhancedAIAnalysis(data: TaskCompletionData): Promise<EnhancedAIAnalysisResult> {
+  private async performEnhancedAIAnalysis(data: TaskCompletionNormalized): Promise<EnhancedAIAnalysisResult> {
     // Convert completion data to handwriting data format
     const handwritingData = {
       strokes: data.strokes,
@@ -284,7 +291,7 @@ class TaskCompletionService {
   /**
    * Perform basic AI analysis on completed task (fallback)
    */
-  private async performAIAnalysis(data: TaskCompletionData) {
+  private async performAIAnalysis(data: TaskCompletionNormalized) {
     // Convert completion data to handwriting data format
     const handwritingData = {
       strokes: data.strokes,
@@ -292,8 +299,9 @@ class TaskCompletionService {
       canvasSize: data.canvasSize
     };
 
-    // Perform basic AI analysis using disease-aware service (defaults to 'alzheimers')
-    const analysisService = AnalysisServiceFactory.getService('alzheimers');
+    // Perform basic AI analysis using disease-aware service
+    const disease: DiseaseType = data.disease || 'alzheimers';
+    const analysisService = AnalysisServiceFactory.getService(disease);
     const analysisResult = analysisService.analyzeHandwriting(handwritingData);
     
     return analysisResult;
@@ -302,7 +310,7 @@ class TaskCompletionService {
   /**
    * Extract feature names for AI analysis metadata
    */
-  private extractFeatureNames(data: TaskCompletionData): Record<string, number> {
+  private extractFeatureNames(data: TaskCompletionNormalized): Record<string, number> {
     // This would extract the actual feature values used in AI analysis
     // For now, return a simplified version
     return {
@@ -316,10 +324,10 @@ class TaskCompletionService {
   /**
    * Calculate average pressure from strokes
    */
-  private calculateAveragePressure(strokes: TaskCompletionData['strokes']): number {
+  private calculateAveragePressure(strokes: NormalizedStroke[]): number {
     if (strokes.length === 0) return 0;
-    
-    const allPressures = strokes.flatMap(stroke => 
+
+    const allPressures = strokes.flatMap(stroke =>
       stroke.points.map(point => point.pressure)
     );
     
@@ -329,39 +337,43 @@ class TaskCompletionService {
   /**
    * Calculate drawing speed (points per second)
    */
-  private calculateDrawingSpeed(strokes: TaskCompletionData['strokes'], totalTime: number): number {
-    if (totalTime === 0) return 0;
-    
+  private calculateDrawingSpeed(strokes: NormalizedStroke[], totalTimeSeconds: number): number {
+    if (totalTimeSeconds === 0) return 0;
+
     const totalPoints = strokes.reduce((sum, stroke) => sum + stroke.points.length, 0);
-    return totalPoints / (totalTime / 1000); // Convert to points per second
+    return totalPoints / totalTimeSeconds;
   }
 
   /**
    * Get task recommendations based on completion data
    */
   getTaskRecommendations(completionData: TaskCompletionData): string[] {
+    const data: TaskCompletionNormalized = {
+      ...completionData,
+      strokes: normalizeStrokesInput(completionData.strokes)
+    };
     const recommendations: string[] = [];
     
     // Time-based recommendations
-    if (completionData.elapsedTime < completionData.timeLimit * 0.5) {
+    if (data.elapsedTime < data.timeLimit * 0.5) {
       recommendations.push('Consider taking more time to complete the task carefully');
     }
     
-    if (completionData.elapsedTime > completionData.timeLimit) {
+    if (data.elapsedTime > data.timeLimit) {
       recommendations.push('Task completed but exceeded time limit');
     }
     
     // Stroke-based recommendations
-    if (completionData.strokes.length < 3) {
+    if (data.strokes.length < 3) {
       recommendations.push('Try to draw more continuous strokes');
     }
     
-    if (completionData.strokes.length > 50) {
+    if (data.strokes.length > 50) {
       recommendations.push('Consider drawing with fewer, longer strokes');
     }
     
     // Pressure-based recommendations
-    const avgPressure = this.calculateAveragePressure(completionData.strokes);
+    const avgPressure = this.calculateAveragePressure(data.strokes);
     if (avgPressure < 0.3) {
       recommendations.push('Try applying more pressure while drawing');
     }
@@ -387,22 +399,28 @@ class TaskCompletionService {
       effort: number;
     };
   } {
+    const data: TaskCompletionNormalized = {
+      ...completionData,
+      strokes: normalizeStrokesInput(completionData.strokes)
+    };
     const maxScore = 100;
     
     // Completion score (40% of total)
-    const completionScore = completionData.strokes.length > 0 ? 40 : 0;
+    const completionScore = data.strokes.length > 0 ? 40 : 0;
     
     // Timing score (30% of total)
-    const timeRatio = completionData.elapsedTime / completionData.timeLimit;
+    const timeRatio = data.elapsedTime / data.timeLimit;
     const timingScore = timeRatio <= 1 ? 30 : Math.max(0, 30 - (timeRatio - 1) * 15);
     
     // Quality score (20% of total) - based on stroke continuity
-    const avgStrokeLength = completionData.strokes.reduce((sum, stroke) => 
-      sum + stroke.points.length, 0) / completionData.strokes.length;
+    const avgStrokeLength = data.strokes.length > 0
+      ? data.strokes.reduce((sum, stroke) =>
+          sum + stroke.points.length, 0) / data.strokes.length
+      : 0;
     const qualityScore = Math.min(20, avgStrokeLength * 2);
     
     // Effort score (10% of total) - based on total points drawn
-    const totalPoints = completionData.strokes.reduce((sum, stroke) => sum + stroke.points.length, 0);
+    const totalPoints = data.strokes.reduce((sum, stroke) => sum + stroke.points.length, 0);
     const effortScore = Math.min(10, totalPoints / 10);
     
     const totalScore = completionScore + timingScore + qualityScore + effortScore;

@@ -29,6 +29,8 @@ export const TEST_TO_TASK_MAP: Record<string, string> = {
   'triangleDrawing': 'triangle_drawing',
   'pentagonDrawing': 'pentagon_drawing',
   'spiralDrawing': 'spiral_drawing',
+  'lineTracing': 'line_tracing',
+  'freeWriting': 'free_writing',
   'clockDrawing': 'clock-drawing',
   'wordMemory': 'word_memory',
   'nameMemory': 'name_memory',

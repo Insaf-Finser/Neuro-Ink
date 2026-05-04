@@ -13,6 +13,14 @@ export const DiseaseRouteRedirect: React.FC<{ children: React.ReactNode }> = ({ 
 
   useEffect(() => {
     const path = location.pathname;
+    // Important: don't rely on `currentDisease` inside this effect for decisions
+    // immediately after calling `setDisease` (state updates are async). Instead,
+    // derive an "effective" disease from the URL when possible.
+    const diseaseFromPath =
+      path.startsWith('/alzheimers') ? 'alzheimers' :
+      path.startsWith('/parkinsons') ? 'parkinsons' :
+      null;
+    const effectiveDisease = diseaseFromPath ?? currentDisease;
     
     // Keep disease in sync with URL so dashboard/tasks always match the disease in the path
     if (path.startsWith('/alzheimers')) {
@@ -28,7 +36,7 @@ export const DiseaseRouteRedirect: React.FC<{ children: React.ReactNode }> = ({ 
     }
     
     // Skip if already disease-scoped or if it's a public route
-    if (path.startsWith(`/${currentDisease}/`) || 
+    if (path.startsWith(`/${effectiveDisease}/`) || 
         path === '/' || 
         path === '/login' || 
         path === '/signup' || 
@@ -55,7 +63,7 @@ export const DiseaseRouteRedirect: React.FC<{ children: React.ReactNode }> = ({ 
     );
 
     if (isProtectedRoute) {
-      const newPath = `/${currentDisease}${path}`;
+      const newPath = `/${effectiveDisease}${path}`;
       navigate(newPath, { replace: true });
     }
   }, [location.pathname, currentDisease, navigate, setDisease]);

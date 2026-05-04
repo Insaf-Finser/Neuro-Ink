@@ -11,6 +11,7 @@ import {
 import { PARKINSONS_TASKS } from '../data/parkinsonsTasks';
 import { HANDWRITING_TASKS } from '../data/handwritingTasks';
 import { useDisease } from '../context/DiseaseContext';
+import { getTestResults, StoredTestResult } from '../services/resultsStorageService';
 
 const Container = styled(motion.div)`
   padding: 40px 0;
@@ -263,22 +264,78 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   }
 `;
 
+const DiseasePredictionCard = styled.div<{ $positive: boolean }>`
+  background: ${props => props.$positive ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' : 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)'};
+  border: 2px solid ${props => props.$positive ? '#f59e0b' : '#10b981'};
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  text-align: center;
+`;
+
+const DiseasePredictionTitle = styled.h2`
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 8px 0;
+`;
+
+const DiseasePredictionResult = styled.div<{ $positive: boolean }>`
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: ${props => props.$positive ? '#92400e' : '#065f46'};
+  margin-bottom: 8px;
+`;
+
+const DiseasePredictionSub = styled.p`
+  font-size: 0.95rem;
+  color: #666;
+  margin: 0;
+`;
+
 const AssessmentResults: React.FC = () => {
   const navigate = useNavigate();
   const { currentDisease } = useDisease();
   const [completedAt, setCompletedAt] = useState<string>('');
+  const [storedResults, setStoredResults] = useState<StoredTestResult[]>([]);
 
   useEffect(() => {
     const now = new Date();
     setCompletedAt(now.toLocaleString());
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    getTestResults()
+      .then((results) => {
+        if (cancelled) return;
+        const disease = currentDisease || 'alzheimers';
+        const filtered = results.filter((r) => r.disease === disease);
+        setStoredResults(filtered);
+      })
+      .catch(() => setStoredResults([]));
+    return () => { cancelled = true; };
+  }, [currentDisease]);
+
   const tasks = currentDisease === 'parkinsons' ? PARKINSONS_TASKS : HANDWRITING_TASKS;
   const diseaseLabel = currentDisease === 'parkinsons' ? "Parkinson's" : 'Alzheimer\'s';
 
+  const diseasePredictionPositive = storedResults.some(
+    (r) => r.aiResult?.overallRisk === 'high'
+  );
+  const avgProbability = storedResults.length > 0
+    ? Math.round(
+        storedResults.reduce((sum, r) => sum + (r.aiResult?.probability ?? 0), 0) / storedResults.length
+      )
+    : 0;
+
   const handleRetake = () => {
     const firstTask = tasks[0];
-    navigate(`/assessment-test/${firstTask.id}`);
+    if (currentDisease === 'parkinsons') {
+      navigate(`/parkinsons/assessment-test/${firstTask.id}`);
+    } else {
+      navigate(`/assessment-test/${firstTask.id}`);
+    }
   };
 
   const handleReturnHome = () => {
@@ -312,6 +369,24 @@ const AssessmentResults: React.FC = () => {
             </ResearchText>
           </ResearchContent>
         </ResearchBanner>
+
+        {storedResults.length > 0 && (
+          <DiseasePredictionCard $positive={diseasePredictionPositive}>
+            <DiseasePredictionTitle>Disease prediction</DiseasePredictionTitle>
+            <DiseasePredictionResult $positive={diseasePredictionPositive}>
+              {diseasePredictionPositive
+                ? `Possible signs of ${diseaseLabel} risk indicated`
+                : `No signs of ${diseaseLabel} detected`
+              }
+            </DiseasePredictionResult>
+            <DiseasePredictionSub>
+              {diseasePredictionPositive
+                ? `Based on your assessment tasks, the model suggests possible risk (${avgProbability}% average probability). This is not a diagnosis — please discuss with a healthcare provider.`
+                : `Based on your completed tasks, the model did not detect significant signs of ${diseaseLabel}. This is screening only, not a diagnosis.`
+              }
+            </DiseasePredictionSub>
+          </DiseasePredictionCard>
+        )}
 
         <SummaryCard
           initial={{ opacity: 0, y: 10 }}

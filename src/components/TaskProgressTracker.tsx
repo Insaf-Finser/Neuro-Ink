@@ -6,7 +6,6 @@ import styled from 'styled-components';
 import { CheckCircle, Clock, BarChart3 } from 'lucide-react';
 import { getTasksForDisease } from '../data/handwritingTasks';
 import { getTestResults, getCompletedTaskIds } from '../services/resultsStorageService';
-import { sessionStorageService } from '../services/sessionStorageService';
 import { useAuth } from '../context/AuthContext';
 import { useDisease } from '../context/DiseaseContext';
 
@@ -192,14 +191,9 @@ const TaskProgressTracker: React.FC = () => {
         // Get completed task IDs from Firebase
         const firebaseCompleted = await getCompletedTaskIds();
         
-        // Load from sessionStorage
-        const sessions = await sessionStorageService.getSessions();
-        const sessionCompleted = sessions
-          .filter(session => session.taskId && session.completed)
-          .map(session => session.taskId!);
-        
-        // Combine both sources
-        const allCompleted = new Set([...firebaseCompleted, ...sessionCompleted]);
+        // Firestore is the source of truth for authenticated users.
+        // `getCompletedTaskIds` already pulls from Firestore when signed in.
+        const allCompleted = new Set([...firebaseCompleted]);
         
         // Calculate stats using disease-aware tasks
         const tasks = getTasksForDisease(currentDisease);
@@ -210,6 +204,7 @@ const TaskProgressTracker: React.FC = () => {
         // Calculate average score from test results
         // Normalize all scores to 0-1 range before averaging
         const scores = firebaseResults
+          .filter(result => (result.disease || 'alzheimers') === currentDisease)
           .map(result => {
             // validation.accuracy is in 0-100 range, convert to 0-1
             if (result.validation?.accuracy != null) {
@@ -237,9 +232,10 @@ const TaskProgressTracker: React.FC = () => {
         
         // Create progress object for each task
         const progresses: Record<string, any> = {};
+        const diseaseResults = firebaseResults.filter(r => (r.disease || 'alzheimers') === currentDisease);
         tasks.forEach(task => {
           const isCompleted = allCompleted.has(task.id);
-          const result = firebaseResults.find(r => r.taskId === task.id);
+          const result = diseaseResults.find(r => r.taskId === task.id);
           
           progresses[task.id] = {
             isCompleted,

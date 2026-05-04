@@ -1,5 +1,4 @@
-// Parkinson's disease handwriting tasks (UI only - no analysis)
-// These tasks are for prototype/research UI purposes only
+// Parkinson's disease handwriting tasks — used with the same AI + Firestore pipeline as other NeuroInk tasks.
 
 export interface ParkinsonsTask {
   id: string;

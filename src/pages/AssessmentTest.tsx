@@ -1,12 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { Clock, ArrowRight, RotateCcw, AlertCircle } from 'lucide-react';
 import DrawingCanvas, { DrawingCanvasRef } from '../components/DrawingCanvas';
 import { PARKINSONS_TASKS } from '../data/parkinsonsTasks';
-import { HANDWRITING_TASKS } from '../data/handwritingTasks';
+import { HANDWRITING_TASKS, getTasksForDisease } from '../data/handwritingTasks';
 import { useDisease } from '../context/DiseaseContext';
-import { analyzeTest } from '../services/testAnalysisService';
+import { useTaskCompletion } from '../hooks/useTaskCompletion';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -250,19 +250,31 @@ const AssessmentTest: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const { currentDisease } = useDisease();
   const canvasRef = useRef<DrawingCanvasRef>(null);
+  const startTimeRef = useRef(Date.now());
+  const { completeTask, isCompleting } = useTaskCompletion();
   
   const [taskIndex, setTaskIndex] = useState(0);
   const [testStatus, setTestStatus] = useState<'pending' | 'completed' | 'error'>('pending');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Get tasks based on disease
-  const tasks = currentDisease === 'parkinsons' ? PARKINSONS_TASKS : HANDWRITING_TASKS;
+  // Get tasks based on disease (Parkinson's uses dedicated task list + shared validation shape)
+  const tasks = currentDisease === 'parkinsons' ? getTasksForDisease('parkinsons') : HANDWRITING_TASKS;
   const currentTask = tasks[taskIndex];
   const totalTasks = tasks.length;
   const progress = ((taskIndex + 1) / totalTasks) * 100;
 
   // Use TestHarness for drawing tasks (Parkinsons uses drawing)
   const isDrawingTask = currentDisease === 'parkinsons' && currentTask;
+
+  useEffect(() => {
+    if (currentDisease !== 'parkinsons' || !taskId) return;
+    const idx = PARKINSONS_TASKS.findIndex(t => t.id === taskId);
+    if (idx >= 0) setTaskIndex(idx);
+  }, [taskId, currentDisease]);
+
+  useEffect(() => {
+    startTimeRef.current = Date.now();
+  }, [taskIndex, currentDisease]);
 
   const handleClearCanvas = () => {
     canvasRef.current?.clear();
@@ -282,14 +294,15 @@ const AssessmentTest: React.FC = () => {
           return;
         }
 
-        await analyzeTest(
-          currentTask.name,
+        const canvasSize = canvasRef.current.getCanvasSize() || { width: 800, height: 600 };
+        const elapsedSec = Math.max(1, Math.round((Date.now() - startTimeRef.current) / 1000));
+
+        await completeTask({
+          taskId: currentTask.id,
+          elapsedTime: elapsedSec,
           strokes,
-          { width: 800, height: 600 },
-          0,
-          undefined,
-          currentDisease as 'alzheimers' | 'parkinsons'
-        );
+          canvasSize
+        });
 
         setTestStatus('completed');
       }
@@ -301,13 +314,17 @@ const AssessmentTest: React.FC = () => {
 
   const handleNext = () => {
     if (taskIndex < totalTasks - 1) {
-      setTaskIndex(taskIndex + 1);
+      const nextId = tasks[taskIndex + 1].id;
+      if (currentDisease === 'parkinsons') {
+        navigate(`/parkinsons/assessment-test/${nextId}`);
+      } else {
+        setTaskIndex(taskIndex + 1);
+      }
       setTestStatus('pending');
       setErrorMessage('');
       canvasRef.current?.clear();
     } else {
-      // All tasks completed - navigate to results
-      navigate('/assessment-results', { state: { disease: currentDisease } });
+      navigate('/parkinsons/assessment-results', { state: { disease: currentDisease } });
     }
   };
 
@@ -339,7 +356,7 @@ const AssessmentTest: React.FC = () => {
           <ResearchLabel>Research Mode</ResearchLabel>
           <ResearchText>
             {currentDisease === 'parkinsons' 
-              ? 'This is a prototype research interface for Parkinson\'s disease testing. No clinical diagnosis is performed.'
+              ? 'Parkinson\'s handwriting assessment with AI analysis. Results are saved to your account. Not a clinical diagnosis.'
               : 'This is a research assessment interface. Results are for research purposes only.'}
           </ResearchText>
         </ResearchBanner>
@@ -390,7 +407,10 @@ const AssessmentTest: React.FC = () => {
           <Button 
             $variant="primary" 
             onClick={testStatus === 'completed' ? handleNext : handleSubmit}
-            disabled={testStatus === 'pending' && canvasRef.current?.getAllStrokes().length === 0}
+            disabled={
+              isCompleting ||
+              (testStatus === 'pending' && canvasRef.current?.getAllStrokes().length === 0)
+            }
           >
             {testStatus === 'completed' ? (
               <>
@@ -400,7 +420,7 @@ const AssessmentTest: React.FC = () => {
             ) : (
               <>
                 <Clock size={16} />
-                Submit
+                {isCompleting ? 'Analyzing…' : 'Submit'}
               </>
             )}
           </Button>
