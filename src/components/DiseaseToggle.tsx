@@ -112,23 +112,72 @@ const DiseaseToggle: React.FC<DiseaseToggleProps> = ({ variant = 'header' }) => 
     }
   }, [location.pathname, currentDisease, setDisease]);
 
+  const mapPathForDisease = (targetDisease: 'alzheimers' | 'parkinsons') => {
+    const path = location.pathname;
+
+    // Awareness/home for each disease
+    if (path === '/alzheimers' || path === '/parkinsons') {
+      return `/${targetDisease}`;
+    }
+
+    // Tasks routes differ between diseases.
+    if (
+      path.startsWith('/parkinsons/tests') ||
+      path.startsWith('/parkinsons/test/') ||
+      path.startsWith('/parkinsons/assessment-test/')
+    ) {
+      return targetDisease === 'parkinsons' ? '/parkinsons/tests' : '/alzheimers/tasks';
+    }
+    if (
+      path.startsWith('/alzheimers/tasks') ||
+      path.startsWith('/alzheimers/test/') ||
+      path.startsWith('/test/') ||
+      path === '/tasks'
+    ) {
+      return targetDisease === 'parkinsons' ? '/parkinsons/tests' : '/alzheimers/tasks';
+    }
+
+    // Results routes differ too.
+    if (
+      path.startsWith('/parkinsons/cognitive-results') ||
+      path.startsWith('/parkinsons/results') ||
+      path.startsWith('/parkinsons/assessment-results')
+    ) {
+      return targetDisease === 'parkinsons' ? '/parkinsons/cognitive-results' : '/alzheimers/results';
+    }
+    if (
+      path.startsWith('/alzheimers/results') ||
+      path.startsWith('/results') ||
+      path.startsWith('/ai-analysis') ||
+      path.startsWith('/comprehensive-results')
+    ) {
+      return targetDisease === 'parkinsons' ? '/parkinsons/cognitive-results' : '/alzheimers/results';
+    }
+
+    // Dashboard routes
+    if (
+      path.startsWith('/alzheimers/dashboard') ||
+      path.startsWith('/parkinsons/dashboard') ||
+      path === '/dashboard'
+    ) {
+      return `/${targetDisease}`;
+    }
+
+    // Generic disease-prefixed path fallback
+    if (path.startsWith('/alzheimers/') || path.startsWith('/parkinsons/')) {
+      return path.replace(/^\/(alzheimers|parkinsons)/, `/${targetDisease}`);
+    }
+
+    return `/${targetDisease}`;
+  };
+
   const handleToggle = (disease: 'alzheimers' | 'parkinsons') => {
     if (disease === currentDisease) return;
     
     setDisease(disease);
     localStorage.setItem('selectedDisease', disease);
-    
-    // If on an awareness page, navigate to the other disease's awareness page
-    if (location.pathname === '/alzheimers' || location.pathname === '/parkinsons') {
-      navigate(`/${disease}`);
-    } else if (location.pathname.startsWith('/alzheimers/') || location.pathname.startsWith('/parkinsons/')) {
-      // Replace the disease prefix in the path
-      const newPath = location.pathname.replace(/^\/(alzheimers|parkinsons)/, `/${disease}`);
-      navigate(newPath);
-    } else {
-      // Navigate to the disease awareness page
-      navigate(`/${disease}`);
-    }
+
+    navigate(mapPathForDisease(disease));
   };
 
   const isAlzheimers = currentDisease === 'alzheimers';

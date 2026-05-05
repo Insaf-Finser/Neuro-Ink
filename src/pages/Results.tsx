@@ -32,6 +32,10 @@ const ResultsContainer = styled.div`
 const ResultsHeader = styled.div`
   text-align: center;
   margin-bottom: 48px;
+
+  @media (max-width: 768px) {
+    margin-bottom: 20px;
+  }
 `;
 
 const ResultsTitle = styled.h1`
@@ -77,6 +81,7 @@ const ResultsContent = styled.div`
     border-radius: 12px;
     width: calc(100% - 32px);
     margin: 0 auto;
+    overflow-x: hidden;
   }
 `;
 
@@ -90,6 +95,11 @@ const StatsTitle = styled.h2`
   color: #333;
   margin-bottom: 24px;
   text-align: center;
+
+  @media (max-width: 768px) {
+    font-size: 1.3rem;
+    margin-bottom: 16px;
+  }
 `;
 
 const StatsGrid = styled.div`
@@ -110,6 +120,11 @@ const StatCard = styled.div`
   background: #f8f9fa;
   border-radius: 16px;
   border: 1px solid #e9ecef;
+
+  @media (max-width: 768px) {
+    gap: 12px;
+    padding: 16px;
+  }
 `;
 
 const StatIcon = styled.div`
@@ -121,6 +136,11 @@ const StatIcon = styled.div`
   align-items: center;
   justify-content: center;
   color: white;
+
+  @media (max-width: 768px) {
+    width: 40px;
+    height: 40px;
+  }
 `;
 
 const StatContent = styled.div`
@@ -132,6 +152,10 @@ const StatNumber = styled.div`
   font-weight: 700;
   color: #333;
   line-height: 1;
+
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+  }
 `;
 
 const StatLabel = styled.div`
@@ -149,6 +173,11 @@ const TasksTitle = styled.h2`
   font-weight: 600;
   color: #333;
   margin-bottom: 24px;
+
+  @media (max-width: 768px) {
+    font-size: 1.3rem;
+    margin-bottom: 16px;
+  }
 `;
 
 const TasksList = styled.div`
@@ -162,6 +191,10 @@ const TaskResult = styled.div`
   border-radius: 12px;
   padding: 24px;
   border: 1px solid #e9ecef;
+
+  @media (max-width: 768px) {
+    padding: 14px;
+  }
 `;
 
 const TaskHeader = styled.div`
@@ -169,6 +202,12 @@ const TaskHeader = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 16px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
 `;
 
 const TaskName = styled.h3`
@@ -176,6 +215,11 @@ const TaskName = styled.h3`
   font-weight: 600;
   color: #333;
   margin: 0;
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    line-height: 1.3;
+  }
 `;
 
 const TaskMeta = styled.div`
@@ -183,6 +227,14 @@ const TaskMeta = styled.div`
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
 `;
 
 const TaskDate = styled.div`
@@ -191,6 +243,10 @@ const TaskDate = styled.div`
   gap: 4px;
   color: #666;
   font-size: 0.9rem;
+
+  @media (max-width: 768px) {
+    font-size: 0.8rem;
+  }
 `;
 
 const TaskScore = styled.div<{ $risk: string }>`
@@ -223,22 +279,47 @@ const TaskDetails = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 16px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 `;
 
 const TaskMetric = styled.div`
   text-align: center;
+
+  @media (max-width: 768px) {
+    text-align: left;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
 `;
 
 const MetricLabel = styled.div`
   font-size: 0.9rem;
   color: #666;
   margin-bottom: 4px;
+
+  @media (max-width: 768px) {
+    margin-bottom: 0;
+    font-size: 0.8rem;
+  }
 `;
 
 const MetricValue = styled.div`
   font-size: 1.2rem;
   font-weight: 600;
   color: #333;
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+  }
 `;
 
 const DiseasePredictionCard = styled.div<{ $positive: boolean }>`
@@ -248,6 +329,11 @@ const DiseasePredictionCard = styled.div<{ $positive: boolean }>`
   padding: 24px;
   margin-bottom: 32px;
   text-align: center;
+
+  @media (max-width: 768px) {
+    padding: 14px;
+    margin-bottom: 20px;
+  }
 `;
 
 const DiseasePredictionTitle = styled.h2`
@@ -262,12 +348,21 @@ const DiseasePredictionResult = styled.div<{ $positive: boolean }>`
   font-weight: 800;
   color: ${props => props.$positive ? '#92400e' : '#065f46'};
   margin-bottom: 8px;
+
+  @media (max-width: 768px) {
+    font-size: 1.1rem;
+  }
 `;
 
 const DiseasePredictionSub = styled.p`
   font-size: 0.95rem;
   color: #666;
   margin: 0;
+
+  @media (max-width: 768px) {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
 `;
 
 const CategorySummaryGrid = styled.div`
@@ -275,6 +370,11 @@ const CategorySummaryGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
   margin-top: 20px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 `;
 
 const CategoryCard = styled.div<{ $positive: boolean }>`
@@ -307,6 +407,7 @@ const CategoryMeta = styled.div`
 const Results: React.FC = () => {
   const { currentDisease } = useDisease();
   const diseaseLabel = currentDisease === 'parkinsons' ? "Parkinson's" : "Alzheimer's";
+  const nonAggregateRiskTaskIds = useMemo(() => new Set(['maze_navigation', 'maze_path_trace']), []);
   const diseaseTasks = useMemo(() => getTasksForDisease(currentDisease), [currentDisease]);
   const [sessions, setSessions] = useState<StoredTestResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -316,6 +417,12 @@ const Results: React.FC = () => {
     averageScore: 0,
     riskDistribution: { low: 0, moderate: 0, high: 0 }
   });
+
+  const probabilityToPercent = (p: number) => {
+    // Supports 0–1 (fraction), 0–100 (percent), and guards against accidental double-scaling.
+    const percent = p <= 1 ? p * 100 : p;
+    return Math.max(0, Math.min(100, Math.round(percent)));
+  };
 
   useEffect(() => {
     const loadSessions = async () => {
@@ -348,18 +455,24 @@ const Results: React.FC = () => {
 
         setSessions(uniqueCompletedSessions);
 
+        // Exclude maze tasks from overall disease-risk aggregation.
+        // They remain visible in task list/category summaries.
+        const riskAggregateSessions = uniqueCompletedSessions.filter(
+          s => !nonAggregateRiskTaskIds.has(s.taskId || '')
+        );
+
         // Calculate overall statistics
         const totalSessions = uniqueCompletedSessions.length;
-        const scores = uniqueCompletedSessions
+        const scores = riskAggregateSessions
           .map(r => (r.aiResult?.probability ?? 0))
-          .map(p => (p > 1 ? p : p * 100)) // supports both 0-1 and 0-100 representations
+          .map(probabilityToPercent)
           .filter(score => score > 0);
         const averageScore = scores.length > 0 
           ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
           : 0;
 
         // Calculate risk distribution
-        const riskDistribution = uniqueCompletedSessions.reduce((acc, session) => {
+        const riskDistribution = riskAggregateSessions.reduce((acc, session) => {
           const risk = session.aiResult?.overallRisk || 'unknown';
           if (risk === 'low') acc.low++;
           else if (risk === 'moderate') acc.moderate++;
@@ -381,7 +494,7 @@ const Results: React.FC = () => {
     };
 
     loadSessions();
-  }, [currentDisease]);
+  }, [currentDisease, diseaseTasks, nonAggregateRiskTaskIds]);
 
   const getTaskName = (taskId: string) => {
     const task = diseaseTasks.find(t => t.id === taskId);
@@ -398,7 +511,9 @@ const Results: React.FC = () => {
     }
   };
 
-  const diseasePredictionPositive = sessions.some(s => s.aiResult?.overallRisk === 'high');
+  const diseasePredictionPositive = sessions.some(
+    s => !nonAggregateRiskTaskIds.has(s.taskId || '') && s.aiResult?.overallRisk === 'high'
+  );
   const outcomeLabel = diseasePredictionPositive ? 'Positive screening' : 'Negative screening';
   const categorySummaries = useMemo(() => {
     const categoryByTaskId = new Map(diseaseTasks.map(task => [task.id, task.category]));
@@ -409,7 +524,7 @@ const Results: React.FC = () => {
       const category = categoryByTaskId.get(session.taskId);
       if (!category) return;
       const rawProbability = session.aiResult?.probability ?? 0;
-      const normalizedProbability = rawProbability > 1 ? rawProbability : rawProbability * 100;
+      const normalizedProbability = probabilityToPercent(rawProbability);
       const current = grouped.get(category) || [];
       current.push(normalizedProbability);
       grouped.set(category, current);
@@ -628,9 +743,7 @@ const Results: React.FC = () => {
                       <MetricLabel>Risk Probability</MetricLabel>
                       <MetricValue>
                         {Math.round(
-                          (session.aiResult?.probability ?? 0) > 1
-                            ? (session.aiResult?.probability ?? 0)
-                            : (session.aiResult?.probability ?? 0) * 100
+                          probabilityToPercent(session.aiResult?.probability ?? 0)
                         )}%
                       </MetricValue>
                     </TaskMetric>

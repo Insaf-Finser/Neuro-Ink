@@ -274,6 +274,60 @@ const DotLabel = styled.div<{ $top: number; $left: number; $connected?: boolean 
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
 `;
 
+const MazeBoard = styled.div`
+  background: #fff;
+  border: 2px solid #dbeafe;
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+`;
+
+const MazeTitle = styled.h3`
+  margin: 0 0 10px 0;
+  color: #1e3a8a;
+  font-size: 1rem;
+`;
+
+const MazeMap = styled.div`
+  position: relative;
+  width: 100%;
+  height: 260px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+`;
+
+const MazeNodeButton = styled.button<{ $x: number; $y: number; $active?: boolean; $isStart?: boolean; $isEnd?: boolean }>`
+  position: absolute;
+  left: ${p => p.$x}%;
+  top: ${p => p.$y}%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid ${p => (p.$active ? '#2563eb' : '#94a3b8')};
+  background: ${p => (p.$isStart ? '#bbf7d0' : p.$isEnd ? '#fecaca' : p.$active ? '#dbeafe' : '#fff')};
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+`;
+
+const MazeSvg = styled.svg`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+`;
+
+type MazeNode = {
+  id: string;
+  x: number;
+  y: number;
+};
+
 function referenceForTask(taskId: string): ReferenceShapeConfig | undefined {
   switch (taskId) {
     case 'spiral_drawing':
@@ -341,6 +395,21 @@ const ParkinsonsTest: React.FC = () => {
     []
   );
   const isDotTask = task?.id === 'dot_target_tapping';
+  const isMazeTask = task?.id === 'maze_path_trace';
+  const [selectedMazePath, setSelectedMazePath] = useState<string[]>([]);
+  const mazeNodes: MazeNode[] = [
+    { id: 'S', x: 8, y: 20 },
+    { id: 'A', x: 30, y: 20 },
+    { id: 'B', x: 55, y: 20 },
+    { id: 'C', x: 55, y: 60 },
+    { id: 'D', x: 82, y: 60 },
+    { id: 'E', x: 92, y: 60 },
+    { id: 'X1', x: 30, y: 60 },
+    { id: 'X2', x: 30, y: 85 },
+  ];
+  const mazeEdges = new Set(['S-A', 'A-B', 'B-C', 'C-D', 'D-E', 'A-X1', 'X1-X2']);
+  const mazeStartId = 'S';
+  const mazeEndId = 'E';
 
   useEffect(() => {
     let cancelled = false;
@@ -367,8 +436,28 @@ const ParkinsonsTest: React.FC = () => {
     if (!task) return;
     if (submitDone || isCompleting || submitStartedRef.current) return;
     submitStartedRef.current = true;
-    const strokes = canvasRef.current?.getAllStrokes() || [];
-    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
+    let strokes = canvasRef.current?.getAllStrokes() || [];
+    let canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
+
+    if (isMazeTask) {
+      if (selectedMazePath.length < 2) {
+        submitStartedRef.current = false;
+        return;
+      }
+      const now = Date.now();
+      const pathNodes = selectedMazePath.map((id) => mazeNodes.find(n => n.id === id)).filter(Boolean) as MazeNode[];
+      const points = pathNodes.map((p, idx) => ({
+        x: (p.x / 100) * 400,
+        y: (p.y / 100) * 300,
+        pressure: 0.5,
+        timestamp: now + idx * 120,
+        tiltX: 0,
+        tiltY: 0,
+        rotation: 0,
+      }));
+      strokes = [points];
+      canvasSize = { width: 400, height: 300 };
+    }
 
     if (!strokes.length || canvasSize.width === 0) {
       submitStartedRef.current = false;
@@ -395,7 +484,7 @@ const ParkinsonsTest: React.FC = () => {
     } catch {
       submitStartedRef.current = false;
     }
-  }, [task, submitDone, isCompleting, timeElapsed, completeTask]);
+  }, [task, submitDone, isCompleting, timeElapsed, completeTask, isMazeTask, selectedMazePath, mazeNodes]);
 
   useEffect(() => {
     if (!task?.timeLimit) return;
@@ -414,6 +503,7 @@ const ParkinsonsTest: React.FC = () => {
       setTimeRemaining(null);
     }
     setTaskResult(null);
+    setSelectedMazePath([]);
     setDotConnectedIndices([]);
     setDotLastReachedIndex(-1);
     setDotCurrentPath([]);
@@ -488,6 +578,7 @@ const ParkinsonsTest: React.FC = () => {
     setTimeRemaining(task.timeLimit ?? null);
     setSubmitDone(false);
     setTaskResult(null);
+    setSelectedMazePath([]);
     setDotConnectedIndices([]);
     setDotLastReachedIndex(-1);
     setDotCurrentPath([]);
@@ -546,6 +637,11 @@ const ParkinsonsTest: React.FC = () => {
         <InstructionText style={{ marginTop: 12, fontWeight: 700 }}>
           <Clock size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
           Time limit: {task.timeLimit} seconds
+        </InstructionText>
+      )}
+      {isMazeTask && (
+        <InstructionText style={{ marginTop: 8 }}>
+          Tap connected map points to trace your route from S to E.
         </InstructionText>
       )}
       {isDotTask && (
@@ -634,51 +730,107 @@ const ParkinsonsTest: React.FC = () => {
           </Timer>
         )}
 
-        <div style={{ position: 'relative' }}>
-          {isDotTask && (
-            <DotOverlayContainer>
-              {dotLayout.map((dot, idx) => (
-                <DotLabel key={dot.n} $top={dot.top} $left={dot.left} $connected={dotConnectedIndices.includes(idx)}>
-                  {dot.n}
-                </DotLabel>
-              ))}
-            </DotOverlayContainer>
-          )}
-          <DrawingCanvas
-            key={task.id}
-            ref={canvasRef}
-            disabled={!hasStarted || submitDone}
-            placeholder={drawingPlaceholderForTask(task.id, hasStarted, submitDone)}
-            onTap={handleCanvasTap}
-            onStrokeStart={(p) => {
-              if (isDotTask) {
-                const expectedStart = dotLastReachedIndex === -1 ? 0 : dotLastReachedIndex;
-                const hit = findHitDotIndex(p);
-                if (hit !== expectedStart) return;
-                setDotCurrentPath([p]);
-              }
-              setIsDrawing(true);
-            }}
-            onPointAdded={(p) => {
-              if (!isDotTask || submitDone) return;
-              setDotCurrentPath(prev => {
-                const next = [...prev, p];
-                const hit = findHitDotIndex(p);
-                const start = dotLastReachedIndex === -1 ? 0 : dotLastReachedIndex;
-                const target = start + 1;
-                if (hit === target && target < dotLayout.length) {
-                  completeDotSegment(start, target);
+        {isMazeTask ? (
+          <MazeBoard>
+            <MazeTitle>Trace Route On Map (S → E)</MazeTitle>
+            {!hasStarted && (
+              <Controls>
+                <Button $variant="primary" onClick={handleCanvasTap}>
+                  Start Maze Task
+                </Button>
+              </Controls>
+            )}
+            {hasStarted && (
+              <MazeMap>
+                <MazeSvg viewBox="0 0 100 100" preserveAspectRatio="none">
+                  {[...mazeEdges].map((edge) => {
+                    const [from, to] = edge.split('-');
+                    const n1 = mazeNodes.find(n => n.id === from)!;
+                    const n2 = mazeNodes.find(n => n.id === to)!;
+                    const idx = selectedMazePath.findIndex((id, i) => i < selectedMazePath.length - 1 &&
+                      ((id === from && selectedMazePath[i + 1] === to) || (id === to && selectedMazePath[i + 1] === from)));
+                    const active = idx >= 0;
+                    return (
+                      <line key={edge} x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y} stroke={active ? '#2563eb' : '#cbd5e1'} strokeWidth={active ? 3 : 2} />
+                    );
+                  })}
+                </MazeSvg>
+                {mazeNodes.map((node) => (
+                  <MazeNodeButton
+                    key={node.id}
+                    $x={node.x}
+                    $y={node.y}
+                    $active={selectedMazePath.includes(node.id)}
+                    $isStart={node.id === mazeStartId}
+                    $isEnd={node.id === mazeEndId}
+                    disabled={submitDone}
+                    onClick={() => {
+                      setSelectedMazePath((prev) => {
+                        if (prev.length === 0) {
+                          return node.id === mazeStartId ? [mazeStartId] : prev;
+                        }
+                        const last = prev[prev.length - 1];
+                        if (node.id === last) return prev;
+                        const a = `${last}-${node.id}`;
+                        const b = `${node.id}-${last}`;
+                        if (!mazeEdges.has(a) && !mazeEdges.has(b)) return prev;
+                        return [...prev, node.id];
+                      });
+                    }}
+                  >
+                    {node.id}
+                  </MazeNodeButton>
+                ))}
+              </MazeMap>
+            )}
+          </MazeBoard>
+        ) : (
+          <div style={{ position: 'relative' }}>
+            {isDotTask && (
+              <DotOverlayContainer>
+                {dotLayout.map((dot, idx) => (
+                  <DotLabel key={dot.n} $top={dot.top} $left={dot.left} $connected={dotConnectedIndices.includes(idx)}>
+                    {dot.n}
+                  </DotLabel>
+                ))}
+              </DotOverlayContainer>
+            )}
+            <DrawingCanvas
+              key={task.id}
+              ref={canvasRef}
+              disabled={!hasStarted || submitDone}
+              placeholder={drawingPlaceholderForTask(task.id, hasStarted, submitDone)}
+              onTap={handleCanvasTap}
+              onStrokeStart={(p) => {
+                if (isDotTask) {
+                  const expectedStart = dotLastReachedIndex === -1 ? 0 : dotLastReachedIndex;
+                  const hit = findHitDotIndex(p);
+                  if (hit !== expectedStart) return;
+                  setDotCurrentPath([p]);
                 }
-                return next;
-              });
-            }}
-            onStrokeEnd={() => {
-              setIsDrawing(false);
-              if (isDotTask && !submitDone) setDotCurrentPath([]);
-            }}
-            referenceShape={refShape}
-          />
-        </div>
+                setIsDrawing(true);
+              }}
+              onPointAdded={(p) => {
+                if (!isDotTask || submitDone) return;
+                setDotCurrentPath(prev => {
+                  const next = [...prev, p];
+                  const hit = findHitDotIndex(p);
+                  const start = dotLastReachedIndex === -1 ? 0 : dotLastReachedIndex;
+                  const target = start + 1;
+                  if (hit === target && target < dotLayout.length) {
+                    completeDotSegment(start, target);
+                  }
+                  return next;
+                });
+              }}
+              onStrokeEnd={() => {
+                setIsDrawing(false);
+                if (isDotTask && !submitDone) setDotCurrentPath([]);
+              }}
+              referenceShape={refShape}
+            />
+          </div>
+        )}
 
         {hasStarted && !submitDone && timeRemaining !== 0 && (
           <Controls>
@@ -689,7 +841,11 @@ const ParkinsonsTest: React.FC = () => {
             <Button
               $variant="primary"
               onClick={() => void handleSubmit()}
-              disabled={isCompleting || (isDotTask && dotConnectedIndices.length < dotLayout.length)}
+              disabled={
+                isCompleting ||
+                (isDotTask && dotConnectedIndices.length < dotLayout.length) ||
+                (isMazeTask && selectedMazePath.length < 2)
+              }
             >
               <Check size={16} />
               {isCompleting ? 'Analyzing…' : 'Done'}

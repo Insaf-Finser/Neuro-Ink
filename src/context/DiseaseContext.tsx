@@ -34,7 +34,9 @@ export const DiseaseProvider: React.FC<DiseaseProviderProps> = ({ children }) =>
       if (path.startsWith('/parkinsons')) return 'parkinsons';
       if (path.startsWith('/alzheimers')) return 'alzheimers';
     }
-    return 'parkinsons';
+    // Safe default when no persisted selection/path is available.
+    // Keep Alzheimer's as baseline default instead of forcing Parkinson's.
+    return 'alzheimers';
   };
 
   const [currentDisease, setCurrentDisease] = useState<DiseaseType>(getInitialDisease);

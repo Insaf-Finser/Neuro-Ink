@@ -1,9 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { Check, CheckCircle, AlertCircle, Clock } from 'lucide-react';
-import { StylusPoint } from '../../services/stylusInputService';
-import DrawingCanvas, { DrawingCanvasRef } from '../../components/DrawingCanvas';
 import TestHarness from '../../components/TestHarness';
 import TestResultsDisplay from '../../components/TestResultsDisplay';
 import { analyzeTest } from '../../services/testAnalysisService';
@@ -116,25 +114,85 @@ const TimerText = styled.div`
   color: #667eea;
 `;
 
-// (Maze reference is now drawn inside the canvas via DrawingCanvas.referenceShape)
+const MazeBoard = styled.div`
+  background: #fff;
+  border: 2px solid #dbeafe;
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+`;
+
+const MazeTitle = styled.h3`
+  margin: 0 0 10px 0;
+  color: #1e3a8a;
+  font-size: 1rem;
+`;
+
+const MazeMap = styled.div`
+  position: relative;
+  width: 100%;
+  height: 260px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+`;
+
+const MazeNodeButton = styled.button<{ $x: number; $y: number; $active?: boolean; $isStart?: boolean; $isEnd?: boolean }>`
+  position: absolute;
+  left: ${p => p.$x}%;
+  top: ${p => p.$y}%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid ${p => (p.$active ? '#2563eb' : '#94a3b8')};
+  background: ${p => (p.$isStart ? '#bbf7d0' : p.$isEnd ? '#fecaca' : p.$active ? '#dbeafe' : '#fff')};
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+`;
+
+const MazeSvg = styled.svg`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+`;
+
+type MazeNode = {
+  id: string;
+  x: number;
+  y: number;
+};
 
 const MazeNavigationTest: React.FC = () => {
-  // Version identifier to verify updated code is loaded
-  useEffect(() => {
-    console.log('[MazeNavigationTest] v2.0 - AI Integration Enabled');
-  }, []);
-
-  const canvasRef = useRef<DrawingCanvasRef>(null);
   const navigate = useNavigate();
 
-  const [isDrawing, setIsDrawing] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(120);
   const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [selectedPath, setSelectedPath] = useState<string[]>([]);
   const { completeTaskAndNavigate, isCompleting } = useTaskCompletion();
+
+  const nodes: MazeNode[] = [
+    { id: 'S', x: 8, y: 20 },
+    { id: 'A', x: 30, y: 20 },
+    { id: 'B', x: 55, y: 20 },
+    { id: 'C', x: 55, y: 60 },
+    { id: 'D', x: 82, y: 60 },
+    { id: 'E', x: 92, y: 60 },
+    { id: 'X1', x: 30, y: 60 },
+    { id: 'X2', x: 30, y: 85 },
+  ];
+  const edges = new Set(['S-A', 'A-B', 'B-C', 'C-D', 'D-E', 'A-X1', 'X1-X2']);
+  const startId = 'S';
+  const endId = 'E';
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -156,36 +214,25 @@ const MazeNavigationTest: React.FC = () => {
 
   useEffect(() => {
     if (timeRemaining === 0 && hasStarted) {
-      setIsDrawing(false);
-      evaluateDrawing();
+      void evaluateChoice();
     }
   }, [timeRemaining, hasStarted]);
 
-  const handleCanvasTap = () => {
+  const handleStart = () => {
     if (!hasStarted) {
       setHasStarted(true);
       setTimeRemaining(120);
     }
   };
 
-  const handleStrokeStart = (point: StylusPoint) => {
-    if (!hasStarted) return;
-    setIsDrawing(true);
-  };
-
-  const handleStrokeEnd = () => {
-    setIsDrawing(false);
-  };
-
   const clearCanvas = () => {
-    canvasRef.current?.clear();
     setHasStarted(false);
-    setIsDrawing(false);
     setTimeElapsed(0);
     setTimeRemaining(120);
     setAiResult(null);
     setIsAnalyzing(false);
     setIsCompleted(false);
+    setSelectedPath([]);
   };
 
   const formatTime = (seconds: number) => {
@@ -196,22 +243,43 @@ const MazeNavigationTest: React.FC = () => {
 
   const getStatus = () => {
     if (timeRemaining === 0) return 'completed';
-    if (isDrawing) return 'drawing';
+    if (hasStarted && !isCompleted) return 'drawing';
     return 'waiting';
   };
 
-  const evaluateDrawing = async () => {
-    const strokes = canvasRef.current?.getAllStrokes() || [];
-    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
-    if (!strokes.length || canvasSize.width === 0 || canvasSize.height === 0) {
+  const toStrokePayload = (path: string[]) => {
+    const pathNodes = path.map((id) => nodes.find(n => n.id === id)).filter(Boolean) as MazeNode[];
+    if (!pathNodes.length) {
+      return { strokes: [], canvasSize: { width: 400, height: 300 } };
+    }
+    const now = Date.now();
+    const points = pathNodes.map((p, idx) => ({
+      x: (p.x / 100) * 400,
+      y: (p.y / 100) * 300,
+      pressure: 0.5,
+      timestamp: now + idx * 120,
+      tiltX: 0,
+      tiltY: 0,
+      rotation: 0,
+    }));
+    return {
+      strokes: [{ points, startTime: points[0].timestamp, endTime: points[points.length - 1].timestamp }],
+      canvasSize: { width: 400, height: 300 }
+    };
+  };
+
+  const evaluateChoice = async () => {
+    if (selectedPath.length < 2) {
       return;
     }
 
     setIsAnalyzing(true);
     try {
+      const { strokes, canvasSize } = toStrokePayload(selectedPath);
       const totalTimeMs = Math.max(1, timeElapsed * 1000);
-      // Placeholder cognitive score for now; can be refined with wall-collision logic
-      const cognitiveScore = 100;
+      const reachedExit = selectedPath[selectedPath.length - 1] === endId;
+      const containsDeadEnd = selectedPath.includes('X2');
+      const cognitiveScore = reachedExit && !containsDeadEnd ? 92 : reachedExit ? 74 : 58;
       const analysis = analyzeTest('mazeNavigation', strokes, canvasSize, totalTimeMs, cognitiveScore);
       setAiResult(analysis.aiResult);
       setIsCompleted(true);
@@ -221,28 +289,11 @@ const MazeNavigationTest: React.FC = () => {
   };
 
   const handleNext = async () => {
-    const rawStrokes = canvasRef.current?.getAllStrokes() || [];
-    const canvasSize = canvasRef.current?.getCanvasSize() || { width: 0, height: 0 };
-
-    if (!rawStrokes.length || canvasSize.width === 0 || canvasSize.height === 0) {
-      // If no data, just move on to pattern completion
+    if (selectedPath.length < 2) {
       navigate('/test/pattern_completion');
       return;
     }
-
-    const strokes = rawStrokes.map(stroke => ({
-      points: stroke.map(p => ({
-        x: p.x,
-        y: p.y,
-        pressure: p.pressure ?? 0,
-        timestamp: p.timestamp ?? 0,
-        tiltX: p.tiltX,
-        tiltY: p.tiltY,
-        rotation: p.rotation,
-      })),
-      startTime: stroke[0]?.timestamp ?? 0,
-      endTime: stroke[stroke.length - 1]?.timestamp ?? 0,
-    }));
+    const { strokes, canvasSize } = toStrokePayload(selectedPath);
 
     await completeTaskAndNavigate(
       {
@@ -262,9 +313,9 @@ const MazeNavigationTest: React.FC = () => {
 
   const instructions = (
     <Instructions>
-      <InstructionText>• Start at the entrance marked "S"</InstructionText>
-      <InstructionText>• Draw a path through the maze to the exit marked "E"</InstructionText>
-      <InstructionText>• Try not to cross the maze walls</InstructionText>
+      <InstructionText>• Analyze the maze and pick the best route to the exit</InstructionText>
+      <InstructionText>• Tap connected map points to trace your route from S to E</InstructionText>
+      <InstructionText>• Avoid dead-end branches and unnecessary detours</InstructionText>
       <InstructionText style={{ marginTop: '12px', fontWeight: 700 }}>
         ⏱️ Time Limit: 120 seconds
       </InstructionText>
@@ -293,7 +344,7 @@ const MazeNavigationTest: React.FC = () => {
           )}
           <StatusText $status={getStatus()}>
             {timeRemaining === 0 ? 'Time\'s up!' :
-             isDrawing ? 'Drawing in progress...' :
+             hasStarted ? 'Maze planning in progress...' :
              hasStarted ? 'Continue navigating...' : 'Ready to start'}
           </StatusText>
         </StatusCard>
@@ -306,24 +357,59 @@ const MazeNavigationTest: React.FC = () => {
           </Timer>
         )}
 
-        <div style={{ position: 'relative' }}>
-          <DrawingCanvas
-            ref={canvasRef}
-            disabled={!hasStarted}
-            placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Navigate the maze here...') : 'Tap canvas to start test'}
-            onTap={handleCanvasTap}
-            onStrokeStart={handleStrokeStart}
-            onStrokeEnd={handleStrokeEnd}
-            referenceShape={{
-              type: 'maze',
-              options: {
-                color: 'rgba(15, 23, 42, 0.45)',
-                lineWidth: 4,
-                opacity: 0.6
-              }
-            }}
-          />
-        </div>
+        <MazeBoard>
+          <MazeTitle>Trace Route On Map (S → E)</MazeTitle>
+          {!hasStarted && (
+            <Controls>
+              <Button $variant="primary" onClick={handleStart}>
+                Start Maze Task
+              </Button>
+            </Controls>
+          )}
+          {hasStarted && (
+            <MazeMap>
+              <MazeSvg viewBox="0 0 100 100" preserveAspectRatio="none">
+                {[...edges].map((edge) => {
+                  const [from, to] = edge.split('-');
+                  const n1 = nodes.find(n => n.id === from)!;
+                  const n2 = nodes.find(n => n.id === to)!;
+                  const idx = selectedPath.findIndex((id, i) => i < selectedPath.length - 1 &&
+                    ((id === from && selectedPath[i + 1] === to) || (id === to && selectedPath[i + 1] === from)));
+                  const active = idx >= 0;
+                  return (
+                    <line key={edge} x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y} stroke={active ? '#2563eb' : '#cbd5e1'} strokeWidth={active ? 3 : 2} />
+                  );
+                })}
+              </MazeSvg>
+              {nodes.map((node) => (
+                <MazeNodeButton
+                  key={node.id}
+                  $x={node.x}
+                  $y={node.y}
+                  $active={selectedPath.includes(node.id)}
+                  $isStart={node.id === startId}
+                  $isEnd={node.id === endId}
+                  disabled={isCompleted}
+                  onClick={() => {
+                    setSelectedPath((prev) => {
+                      if (prev.length === 0) {
+                        return node.id === startId ? [startId] : prev;
+                      }
+                      const last = prev[prev.length - 1];
+                      if (node.id === last) return prev;
+                      const a = `${last}-${node.id}`;
+                      const b = `${node.id}-${last}`;
+                      if (!edges.has(a) && !edges.has(b)) return prev;
+                      return [...prev, node.id];
+                    });
+                  }}
+                >
+                  {node.id}
+                </MazeNodeButton>
+              ))}
+            </MazeMap>
+          )}
+        </MazeBoard>
 
         {aiResult && (
           <div style={{ marginTop: 16 }}>
@@ -339,9 +425,9 @@ const MazeNavigationTest: React.FC = () => {
 
         {hasStarted && timeRemaining !== 0 && !isAnalyzing && !isCompleted && (
           <Controls>
-            <Button $variant="primary" onClick={evaluateDrawing} disabled={isAnalyzing}>
+            <Button $variant="primary" onClick={evaluateChoice} disabled={isAnalyzing || selectedPath.length < 2}>
               <Check size={16} />
-              Done
+              Confirm Route
             </Button>
           </Controls>
         )}

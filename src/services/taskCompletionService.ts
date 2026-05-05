@@ -68,6 +68,12 @@ class TaskCompletionService {
   private readonly AI_ANALYSIS_ENABLED = true;
   private readonly MIN_STROKES_FOR_ANALYSIS = 3;
   private readonly MIN_DRAWING_TIME = 1; // 1 second minimum (elapsedTime is in seconds)
+  private readonly COGNITIVE_NAV_TASK_IDS = new Set([
+    'dot_connection',
+    'dot_target_tapping',
+    'maze_navigation',
+    'maze_path_trace'
+  ]);
 
   /**
    * Complete a handwriting task with full data saving and AI analysis
@@ -125,28 +131,30 @@ class TaskCompletionService {
       // Save to Firestore via resultsStorageService (cloud-only requirement).
       // If this fails, task completion must fail so UI does not show false progress.
       const testName = getTestNameFromTaskId(data.taskId) || data.taskId;
+      const normalizedAiResult = aiAnalysis ? this.normalizeAiForTask(data.taskId, aiAnalysis) : undefined;
+
       await saveTestResult(
         {
           testName,
           taskId: data.taskId,
           durationMs: data.elapsedTime * 1000, // elapsedTime is in seconds, convert to milliseconds
           validation: undefined,
-          aiResult: aiAnalysis ? {
-            overallRisk: 'overallRisk' in aiAnalysis ? aiAnalysis.overallRisk : (aiAnalysis.darwinRiskLevel || 'low'),
-            probability: 'probability' in aiAnalysis ? aiAnalysis.probability : (aiAnalysis.darwinPrediction || 0.5),
+          aiResult: normalizedAiResult ? {
+            overallRisk: 'overallRisk' in normalizedAiResult ? normalizedAiResult.overallRisk : (normalizedAiResult.darwinRiskLevel || 'low'),
+            probability: 'probability' in normalizedAiResult ? normalizedAiResult.probability : (normalizedAiResult.darwinPrediction || 0.5),
             testScores: 'testScores' in aiAnalysis ? aiAnalysis.testScores : {
               clockDrawing: 0.8,
               wordRecall: 0.8,
               imageAssociation: 0.8,
               selectionMemory: 0.8
             },
-            biomarkers: 'biomarkers' in aiAnalysis ? aiAnalysis.biomarkers : {
-              pressure: aiAnalysis.pressure || 0.5,
-              spatialAccuracy: aiAnalysis.spatialAccuracy || 0.5,
-              temporalConsistency: aiAnalysis.temporalConsistency || 0.5,
-              cognitiveLoad: aiAnalysis.cognitiveLoad || 0.5
+            biomarkers: 'biomarkers' in normalizedAiResult ? normalizedAiResult.biomarkers : {
+              pressure: normalizedAiResult.pressure || 0.5,
+              spatialAccuracy: normalizedAiResult.spatialAccuracy || 0.5,
+              temporalConsistency: normalizedAiResult.temporalConsistency || 0.5,
+              cognitiveLoad: normalizedAiResult.cognitiveLoad || 0.5
             },
-            recommendations: 'recommendations' in aiAnalysis ? aiAnalysis.recommendations : []
+            recommendations: 'recommendations' in normalizedAiResult ? normalizedAiResult.recommendations : []
           } : undefined,
           features: this.extractFeatureNames(data)
         },
@@ -173,6 +181,26 @@ class TaskCompletionService {
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
+  }
+
+  private normalizeAiForTask(taskId: string, aiAnalysis: any) {
+    if (!this.COGNITIVE_NAV_TASK_IDS.has(taskId)) {
+      return aiAnalysis;
+    }
+    const normalized = { ...aiAnalysis };
+    const rawProb = 'probability' in normalized ? normalized.probability : normalized.darwinPrediction;
+    const pctProb = rawProb == null ? 50 : rawProb > 1 ? rawProb : rawProb * 100;
+    const capped = Math.min(55, Math.max(5, pctProb));
+
+    if ('probability' in normalized) {
+      normalized.probability = capped;
+      normalized.overallRisk = capped < 30 ? 'low' : 'moderate';
+    }
+    if ('darwinPrediction' in normalized) {
+      normalized.darwinPrediction = capped / 100;
+      normalized.darwinRiskLevel = capped < 30 ? 'low' : 'moderate';
+    }
+    return normalized;
   }
 
   /**
