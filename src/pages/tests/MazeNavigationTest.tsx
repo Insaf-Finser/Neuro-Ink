@@ -263,7 +263,8 @@ const MazeNavigationTest: React.FC = () => {
       rotation: 0,
     }));
     return {
-      strokes: [{ points, startTime: points[0].timestamp, endTime: points[points.length - 1].timestamp }],
+      // `analyzeTest` and task completion expect raw stylus strokes: StylusPoint[][]
+      strokes: [points],
       canvasSize: { width: 400, height: 300 }
     };
   };
@@ -369,7 +370,7 @@ const MazeNavigationTest: React.FC = () => {
           {hasStarted && (
             <MazeMap>
               <MazeSvg viewBox="0 0 100 100" preserveAspectRatio="none">
-                {[...edges].map((edge) => {
+                {Array.from(edges).map((edge) => {
                   const [from, to] = edge.split('-');
                   const n1 = nodes.find(n => n.id === from)!;
                   const n2 = nodes.find(n => n.id === to)!;

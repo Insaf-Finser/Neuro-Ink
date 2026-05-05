@@ -142,7 +142,7 @@ class TaskCompletionService {
           aiResult: normalizedAiResult ? {
             overallRisk: 'overallRisk' in normalizedAiResult ? normalizedAiResult.overallRisk : (normalizedAiResult.darwinRiskLevel || 'low'),
             probability: 'probability' in normalizedAiResult ? normalizedAiResult.probability : (normalizedAiResult.darwinPrediction || 0.5),
-            testScores: 'testScores' in aiAnalysis ? aiAnalysis.testScores : {
+            testScores: aiAnalysis && 'testScores' in aiAnalysis ? aiAnalysis.testScores : {
               clockDrawing: 0.8,
               wordRecall: 0.8,
               imageAssociation: 0.8,

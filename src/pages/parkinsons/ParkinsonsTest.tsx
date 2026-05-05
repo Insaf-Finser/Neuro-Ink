@@ -772,7 +772,7 @@ const ParkinsonsTest: React.FC = () => {
             {hasStarted && (
               <MazeMap>
                 <MazeSvg viewBox="0 0 100 100" preserveAspectRatio="none">
-                  {[...mazeEdges].map((edge) => {
+                  {Array.from(mazeEdges).map((edge) => {
                     const [from, to] = edge.split('-');
                     const n1 = mazeNodes.find(n => n.id === from)!;
                     const n2 = mazeNodes.find(n => n.id === to)!;
