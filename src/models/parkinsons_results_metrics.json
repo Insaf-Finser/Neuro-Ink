@@ -1,0 +1,9 @@
+{
+  "validation_accuracy": 0.6833333333333333,
+  "roc_auc": 0.7051958877465963,
+  "class_distribution": {
+    "healthy": 61,
+    "pd": 59
+  },
+  "source": "parkmodel/Parkinsons-Detection/results_metrics.json"
+}

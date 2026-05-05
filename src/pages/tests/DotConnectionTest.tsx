@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { Check, CheckCircle, AlertCircle, Clock } from 'lucide-react';
@@ -138,19 +138,19 @@ const DotOverlayContainer = styled.div`
   z-index: 2;
 `;
 
-const DotLabel = styled.div<{ $top: number; $left: number }>`
+const DotLabel = styled.div<{ $top: number; $left: number; $connected?: boolean }>`
   position: absolute;
   width: 24px;
   height: 24px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.95);
+  background: ${props => (props.$connected ? '#667eea' : 'rgba(255, 255, 255, 0.95)')};
   border: 2px solid #667eea;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  color: #1f2933;
+  color: ${props => (props.$connected ? '#fff' : '#1f2933')};
   transform: translate(-50%, -50%);
   top: ${props => props.$top}%;
   left: ${props => props.$left}%;
@@ -173,7 +173,19 @@ const DotConnectionTest: React.FC = () => {
   const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [connectedIndices, setConnectedIndices] = useState<number[]>([]);
+  const [lastReachedIndex, setLastReachedIndex] = useState(-1);
+  const [deviationScore, setDeviationScore] = useState<number | null>(null);
+  const [currentPath, setCurrentPath] = useState<StylusPoint[]>([]);
   const { completeTaskAndNavigate, isCompleting } = useTaskCompletion();
+  const dotLayout = useMemo(
+    () => [
+      { n: 1, top: 22, left: 20 },
+      { n: 2, top: 20, left: 50 },
+      { n: 3, top: 26, left: 80 },
+    ],
+    []
+  );
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -211,11 +223,18 @@ return 0;
 
   const handleStrokeStart = (point: StylusPoint) => {
     if (!hasStarted) return;
+    const expectedStart = lastReachedIndex === -1 ? 0 : lastReachedIndex;
+    const hit = findHitDotIndex(point);
+    if (hit !== expectedStart) return;
     setIsDrawing(true);
+    setCurrentPath([point]);
   };
 
   const handleStrokeEnd = () => {
     setIsDrawing(false);
+    if (!isCompleted) {
+      setCurrentPath([]);
+    }
   };
 
   const clearCanvas = () => {
@@ -225,6 +244,62 @@ return 0;
     setTimeElapsed(0);
     setTimeRemaining(60);
     setIsCompleted(false);
+    setConnectedIndices([]);
+    setLastReachedIndex(-1);
+    setDeviationScore(null);
+    setCurrentPath([]);
+  };
+
+  const pointToNorm = (p: StylusPoint) => {
+    const size = canvasRef.current?.getCanvasSize() || { width: 1, height: 1 };
+    return {
+      x: p.x / Math.max(1, size.width),
+      y: p.y / Math.max(1, size.height),
+    };
+  };
+
+  const distanceToSegment = (p: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) => {
+    const l2 = (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
+    if (l2 === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+    let t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    const projection = { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) };
+    return Math.hypot(p.x - projection.x, p.y - projection.y);
+  };
+
+  const findHitDotIndex = (p: StylusPoint) => {
+    const np = pointToNorm(p);
+    for (let i = 0; i < dotLayout.length; i++) {
+      const d = dotLayout[i];
+      if (Math.hypot(np.x - d.left / 100, np.y - d.top / 100) < 0.08) return i;
+    }
+    return -1;
+  };
+
+  const segmentDeviation = (path: StylusPoint[], startIdx: number, endIdx: number) => {
+    if (!path.length) return 0;
+    const a = { x: dotLayout[startIdx].left / 100, y: dotLayout[startIdx].top / 100 };
+    const b = { x: dotLayout[endIdx].left / 100, y: dotLayout[endIdx].top / 100 };
+    const avg = path.reduce((sum, pt) => sum + distanceToSegment(pointToNorm(pt), a, b), 0) / path.length;
+    return avg * 1.6;
+  };
+
+  const completeSegment = (pathPoints: StylusPoint[], startIdx: number, endIdx: number) => {
+    const dev = segmentDeviation(pathPoints, startIdx, endIdx);
+    setConnectedIndices(prev => {
+      const next = [...prev];
+      if (!next.includes(startIdx)) next.push(startIdx);
+      if (!next.includes(endIdx)) next.push(endIdx);
+      return next;
+    });
+    setDeviationScore(prev => (prev ?? 0) + dev);
+    setLastReachedIndex(endIdx);
+    setCurrentPath([]);
+    if (endIdx === dotLayout.length - 1) {
+      setIsCompleted(true);
+      setIsDrawing(false);
+      setDeviationScore(prev => ((prev ?? 0) + dev) / (dotLayout.length - 1));
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -241,9 +316,9 @@ return 0;
 
   const instructions = (
     <Instructions>
-      <InstructionText>• Connect the dots in order from 1 to 10</InstructionText>
-      <InstructionText>• Draw straight lines between consecutive numbers</InstructionText>
-      <InstructionText>• Don't lift your pen until finished</InstructionText>
+      <InstructionText>• Connect the 3 dots in strict order (1 → 2 → 3)</InstructionText>
+      <InstructionText>• Start exactly on the current expected dot</InstructionText>
+      <InstructionText>• Try to draw straight and steady between dots</InstructionText>
       <InstructionText style={{ marginTop: '12px', fontWeight: 700 }}>
         ⏱️ Time Limit: 60 seconds
       </InstructionText>
@@ -260,8 +335,7 @@ return 0;
     setIsAnalyzing(true);
     try {
       const totalTimeMs = Math.max(1, timeElapsed * 1000);
-      // Placeholder cognitive score; can be refined with dot-order logic later
-      const cognitiveScore = 100;
+      const cognitiveScore = Math.max(40, Math.round(100 - ((deviationScore ?? 0.12) * 600)));
       const analysis = analyzeTest('dotConnection', strokes, canvasSize, totalTimeMs, cognitiveScore);
       setAiResult(analysis.aiResult);
       setIsCompleted(true);
@@ -345,21 +419,10 @@ return 0;
         )}
 
         <div style={{ position: 'relative' }}>
-          {/* Numbered dots 1–10 so the task is visually correct */}
+          {/* Numbered dots with ordered-connection logic */}
           <DotOverlayContainer>
-            {[
-              { n: 1, top: 20, left: 20 },
-              { n: 2, top: 20, left: 40 },
-              { n: 3, top: 20, left: 60 },
-              { n: 4, top: 20, left: 80 },
-              { n: 5, top: 40, left: 80 },
-              { n: 6, top: 60, left: 80 },
-              { n: 7, top: 80, left: 80 },
-              { n: 8, top: 80, left: 60 },
-              { n: 9, top: 80, left: 40 },
-              { n: 10, top: 80, left: 20 },
-            ].map(dot => (
-              <DotLabel key={dot.n} $top={dot.top} $left={dot.left}>
+            {dotLayout.map((dot, idx) => (
+              <DotLabel key={dot.n} $top={dot.top} $left={dot.left} $connected={connectedIndices.includes(idx)}>
                 {dot.n}
               </DotLabel>
             ))}
@@ -371,6 +434,19 @@ return 0;
             placeholder={hasStarted ? (timeRemaining === 0 ? 'Time\'s up! Test completed.' : 'Draw here...') : 'Tap canvas to start test'}
             onTap={handleCanvasTap}
             onStrokeStart={handleStrokeStart}
+            onPointAdded={(p) => {
+              if (!hasStarted || isCompleted) return;
+              setCurrentPath(prev => {
+                const next = [...prev, p];
+                const hit = findHitDotIndex(p);
+                const start = lastReachedIndex === -1 ? 0 : lastReachedIndex;
+                const target = start + 1;
+                if (hit === target && target < dotLayout.length) {
+                  completeSegment(next, start, target);
+                }
+                return next;
+              });
+            }}
             onStrokeEnd={handleStrokeEnd}
           />
           {timeRemaining === 0 && hasStarted && (
@@ -394,7 +470,7 @@ return 0;
 
         {hasStarted && timeRemaining !== 0 && !isAnalyzing && !isCompleted && (
           <Controls>
-            <Button $variant="primary" onClick={evaluateDrawing} disabled={isAnalyzing}>
+            <Button $variant="primary" onClick={evaluateDrawing} disabled={isAnalyzing || connectedIndices.length < dotLayout.length}>
               <Check size={16} />
               Done
             </Button>

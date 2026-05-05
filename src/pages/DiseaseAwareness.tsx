@@ -11,7 +11,6 @@ import DiseaseToggle from '../components/DiseaseToggle';
 import { useAuth } from '../context/AuthContext';
 import { consentService } from '../services/consentService';
 import { useStandalone } from '../hooks/useStandalone';
-import { PARKINSONS_TASKS } from '../data/parkinsonsTasks';
 
 // Disease-specific color schemes (both use same colors now)
 const ALZHEIMERS_COLORS = {
@@ -562,7 +561,7 @@ const DiseaseAwareness: React.FC<DiseaseAwarenessProps> = ({ disease }) => {
 
     const targetPath = disease === 'alzheimers' 
       ? '/alzheimers/tasks'
-      : `/parkinsons/assessment-test/${PARKINSONS_TASKS[0].id}`;
+      : '/parkinsons/tests';
 
     // Require sign-in before proceeding (pass pathname so Login/Consent redirect back correctly)
     if (!user) {
@@ -831,8 +830,8 @@ const DiseaseAwareness: React.FC<DiseaseAwarenessProps> = ({ disease }) => {
                     </ListItem>
                   </List>
                   <Paragraph>
-                    Please note: This is a screening structure only. The Parkinson's assessment 
-                    is currently under development and not yet available for full testing.
+                    Please note: This is a screening tool only and does not replace professional
+                    diagnosis. The Parkinson's assessment is available in the full test flow.
                   </Paragraph>
                 </>
               )}
@@ -899,7 +898,7 @@ const DiseaseAwareness: React.FC<DiseaseAwarenessProps> = ({ disease }) => {
                       This is a screening structure only - not a diagnostic tool
                     </ListItem>
                     <ListItem $isAlzheimers={isAlzheimers}>
-                      Parkinson's testing is currently under development and not yet available
+                      Results are for screening support and should be interpreted by healthcare professionals
                     </ListItem>
                     <ListItem $isAlzheimers={isAlzheimers}>
                       This screening structure should not replace professional medical evaluation
@@ -1009,9 +1008,8 @@ const DiseaseAwareness: React.FC<DiseaseAwarenessProps> = ({ disease }) => {
                     </ListItem>
                   </List>
                   <Paragraph>
-                    The Parkinson's screening structure is currently under development. Research 
-                    protocols are being established to ensure accuracy and ethical compliance before 
-                    full deployment.
+                    The Parkinson's screening flow uses the same AI-backed research pipeline used
+                    by the NeuroInk assessment experience, with strict privacy and data-handling safeguards.
                   </Paragraph>
                   <HighlightBox 
                     $type="info" 
@@ -1021,8 +1019,8 @@ const DiseaseAwareness: React.FC<DiseaseAwarenessProps> = ({ disease }) => {
                     viewport={{ once: true }}
                   >
                     <HighlightText>
-                      This screening structure is for research and development purposes. Full 
-                      Parkinson's assessment capabilities are coming soon.
+                      This screening interface supports real task capture and AI analysis for screening use.
+                      It is not intended to provide clinical diagnosis.
                     </HighlightText>
                   </HighlightBox>
                 </>
@@ -1045,7 +1043,7 @@ const DiseaseAwareness: React.FC<DiseaseAwarenessProps> = ({ disease }) => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              {isAlzheimers ? 'Perform Test' : 'Start Assessment'}
+              {isAlzheimers ? 'Perform Test' : 'Start Parkinson\'s Test'}
               <ArrowRight size={20} />
             </PerformTestButton>
             {!isAlzheimers && (
@@ -1057,7 +1055,7 @@ const DiseaseAwareness: React.FC<DiseaseAwarenessProps> = ({ disease }) => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                View Test UI (Prototype)
+                Open Parkinson's Task List
                 <ArrowRight size={20} />
               </PerformTestButton>
             )}
@@ -1073,15 +1071,14 @@ const DiseaseAwareness: React.FC<DiseaseAwarenessProps> = ({ disease }) => {
             onClick={(e) => e.stopPropagation()}
           >
             <Info size={48} color={colors.primary} style={{ margin: '0 auto 16px' }} />
-            <ModalTitle>Parkinson's Test Coming Soon</ModalTitle>
+            <ModalTitle>Parkinson's Screening Information</ModalTitle>
             <ModalText>
-              The Parkinson's disease assessment is currently under development. 
-              We're working hard to bring you a comprehensive screening tool that 
-              meets our high standards for accuracy and reliability.
+              The Parkinson's disease assessment is available as a screening flow with
+              handwriting tasks and AI-assisted analysis.
             </ModalText>
             <ModalText>
-              Please check back soon, or contact us to be notified when the Parkinson's 
-              assessment becomes available.
+              This experience is intended for screening support and research use only.
+              For diagnosis or treatment decisions, please consult qualified clinicians.
             </ModalText>
             <ModalButton $isAlzheimers={isAlzheimers} onClick={() => setShowModal(false)}>
               Understood

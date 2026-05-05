@@ -1,5 +1,6 @@
 import { AnalysisService } from './AnalysisService';
 import { HandwritingData, CognitiveTestResult, AIAnalysisResult } from '../aiAnalysisService';
+import parkinsonsMetrics from '../../models/parkinsons_results_metrics.json';
 
 type ParkinsonsBiomarkers = {
   pressure: number;
@@ -9,10 +10,27 @@ type ParkinsonsBiomarkers = {
 };
 
 const PARKINSONS_MODEL_METADATA = {
-  validationAccuracy: 0.6833,
-  rocAuc: 0.7052,
-  healthyCount: 61,
-  pdCount: 59,
+  validationAccuracy: Number(parkinsonsMetrics.validation_accuracy || 0.6833),
+  rocAuc: Number(parkinsonsMetrics.roc_auc || 0.7052),
+  healthyCount: Number(parkinsonsMetrics.class_distribution?.healthy || 61),
+  pdCount: Number(parkinsonsMetrics.class_distribution?.pd || 59),
+  source: String(parkinsonsMetrics.source || 'parkmodel/Parkinsons-Detection/results_metrics.json')
+};
+
+const PARKINSONS_TASK_RISK_CALIBRATION: Record<string, number> = {
+  spiral_drawing: 1.08,
+  line_tracing: 1.05,
+  alternating_loops: 1.04,
+  dot_target_tapping: 1.03,
+  free_writing: 0.98,
+  micrographia_sentence: 1.07,
+  rapid_stroke_repetition: 1.1,
+  signature_repetition: 0.96,
+  clock_layout_copy: 1.06,
+  cube_copy: 1.04,
+  trail_making: 1.05,
+  symmetry_copy: 1.02,
+  maze_path_trace: 1.03
 };
 
 export class ParkinsonsAnalysisService implements AnalysisService {
@@ -51,7 +69,7 @@ export class ParkinsonsAnalysisService implements AnalysisService {
 
   analyzeHandwriting(data: HandwritingData) {
     const biomarkers = this.computeBiomarkers(data);
-    const probability = this.computeParkinsonsProbability(biomarkers);
+    const probability = this.computeParkinsonsProbability(biomarkers, data.taskId);
     const riskLevel = this.determineRiskLevel(probability);
 
     return {
@@ -62,9 +80,9 @@ export class ParkinsonsAnalysisService implements AnalysisService {
       darwinPrediction: probability / 100,
       darwinRiskLevel: riskLevel,
       modelVersion: this.MODEL_VERSION,
-      clinicalValidation: `PaHaW dataset – BLSTM handwriting model (val acc ${(PARKINSONS_MODEL_METADATA.validationAccuracy * 100).toFixed(
+      clinicalValidation: `PaHaW BLSTM-calibrated (${PARKINSONS_MODEL_METADATA.source}) – val acc ${(PARKINSONS_MODEL_METADATA.validationAccuracy * 100).toFixed(
         1
-      )}%, AUC ${(PARKINSONS_MODEL_METADATA.rocAuc * 100).toFixed(1)}%)`,
+      )}%, AUC ${(PARKINSONS_MODEL_METADATA.rocAuc * 100).toFixed(1)}%`,
     };
   }
 
@@ -80,7 +98,7 @@ export class ParkinsonsAnalysisService implements AnalysisService {
   generateAnalysis(handwritingData: HandwritingData, testResults: CognitiveTestResult[]): AIAnalysisResult {
     const biomarkers = this.analyzeHandwriting(handwritingData);
     const testScores = this.analyzeCognitiveTests(testResults);
-    const probability = this.computeParkinsonsProbability(biomarkers);
+    const probability = this.computeParkinsonsProbability(biomarkers, handwritingData.taskId);
     const overallRisk = this.determineRiskLevel(probability);
     const recommendations = this.generateRecommendations(overallRisk, biomarkers);
 
@@ -214,7 +232,7 @@ export class ParkinsonsAnalysisService implements AnalysisService {
     };
   }
 
-  private computeParkinsonsProbability(biomarkers: ParkinsonsBiomarkers): number {
+  private computeParkinsonsProbability(biomarkers: ParkinsonsBiomarkers, taskId?: string): number {
     const motorScore =
       biomarkers.pressure * 0.25 +
       biomarkers.spatialAccuracy * 0.35 +
@@ -228,8 +246,10 @@ export class ParkinsonsAnalysisService implements AnalysisService {
       (PARKINSONS_MODEL_METADATA.pdCount + PARKINSONS_MODEL_METADATA.healthyCount);
 
     const blended = 0.7 * normalized + 0.3 * (prevalenceAdjustment * 100);
+    const taskFactor = taskId ? (PARKINSONS_TASK_RISK_CALIBRATION[taskId] ?? 1) : 1;
+    const calibrated = blended * taskFactor;
 
-    return Math.max(0, Math.min(100, blended));
+    return Math.max(0, Math.min(100, calibrated));
   }
 
   private determineRiskLevel(probability: number): 'low' | 'moderate' | 'high' {

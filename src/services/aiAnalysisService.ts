@@ -6,6 +6,7 @@ import lightgbmScaler from '../models/lightgbm_scaler.json';
 import lightgbmSummary from '../models/lightgbm_summary.json';
 
 export interface HandwritingData {
+  taskId?: string;
   strokes: Array<{
     points: Array<{ x: number; y: number; pressure: number; timestamp: number; tiltX?: number; tiltY?: number; rotation?: number }>;
     startTime: number;

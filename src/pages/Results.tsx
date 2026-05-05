@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
@@ -12,12 +12,10 @@ import {
   Calendar
 } from 'lucide-react';
 
-import { HANDWRITING_TASKS } from '../data/handwritingTasks';
+import { getTasksForDisease } from '../data/handwritingTasks';
 import SHAPVisualization from '../components/SHAPVisualization';
 import { getTestResults, StoredTestResult } from '../services/resultsStorageService';
 import { useDisease } from '../context/DiseaseContext';
-
-const DISEASE_LABEL = "Alzheimer's";
 
 const ResultsContainer = styled.div`
   padding: 40px 0;
@@ -272,9 +270,44 @@ const DiseasePredictionSub = styled.p`
   margin: 0;
 `;
 
+const CategorySummaryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+`;
+
+const CategoryCard = styled.div<{ $positive: boolean }>`
+  border: 2px solid ${props => (props.$positive ? '#f59e0b' : '#10b981')};
+  background: ${props => (props.$positive ? '#fffbeb' : '#ecfdf5')};
+  border-radius: 12px;
+  padding: 16px;
+`;
+
+const CategoryTitle = styled.div`
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 6px;
+`;
+
+const CategoryOutcome = styled.div<{ $positive: boolean }>`
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: ${props => (props.$positive ? '#92400e' : '#065f46')};
+  margin-bottom: 4px;
+`;
+
+const CategoryMeta = styled.div`
+  font-size: 0.85rem;
+  color: #666;
+`;
+
 
 const Results: React.FC = () => {
   const { currentDisease } = useDisease();
+  const diseaseLabel = currentDisease === 'parkinsons' ? "Parkinson's" : "Alzheimer's";
+  const diseaseTasks = useMemo(() => getTasksForDisease(currentDisease), [currentDisease]);
   const [sessions, setSessions] = useState<StoredTestResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [overallStats, setOverallStats] = useState({
@@ -289,7 +322,12 @@ const Results: React.FC = () => {
       try {
         const allResults = await getTestResults();
         const disease = currentDisease || 'alzheimers';
-        const diseaseResults = allResults.filter(r => (r.disease || 'alzheimers') === disease);
+        let diseaseResults = allResults.filter(r => (r.disease || 'alzheimers') === disease);
+        if (diseaseResults.length === 0) {
+          // Fallback for older/mis-tagged rows: infer by taskId presence in current disease task list.
+          const taskIdSet = new Set(diseaseTasks.map(t => t.id));
+          diseaseResults = allResults.filter(r => !!r.taskId && taskIdSet.has(r.taskId));
+        }
 
         // Deduplicate by taskId so re-taking the same task doesn't inflate counts.
         // Keep the most recent completion for each task (by completedAt).
@@ -346,7 +384,7 @@ const Results: React.FC = () => {
   }, [currentDisease]);
 
   const getTaskName = (taskId: string) => {
-    const task = HANDWRITING_TASKS.find(t => t.id === taskId);
+    const task = diseaseTasks.find(t => t.id === taskId);
     return task ? task.name : taskId;
   };
 
@@ -361,6 +399,46 @@ const Results: React.FC = () => {
   };
 
   const diseasePredictionPositive = sessions.some(s => s.aiResult?.overallRisk === 'high');
+  const outcomeLabel = diseasePredictionPositive ? 'Positive screening' : 'Negative screening';
+  const categorySummaries = useMemo(() => {
+    const categoryByTaskId = new Map(diseaseTasks.map(task => [task.id, task.category]));
+    const grouped = new Map<string, number[]>();
+
+    sessions.forEach((session) => {
+      if (!session.taskId) return;
+      const category = categoryByTaskId.get(session.taskId);
+      if (!category) return;
+      const rawProbability = session.aiResult?.probability ?? 0;
+      const normalizedProbability = rawProbability > 1 ? rawProbability : rawProbability * 100;
+      const current = grouped.get(category) || [];
+      current.push(normalizedProbability);
+      grouped.set(category, current);
+    });
+
+    return Array.from(grouped.entries())
+      .map(([category, probs]) => {
+        const avgProbability = probs.length
+          ? Math.round(probs.reduce((sum, p) => sum + p, 0) / probs.length)
+          : 0;
+        const isPositive = avgProbability >= 60;
+        return {
+          category,
+          avgProbability,
+          completedTasks: probs.length,
+          outcome: isPositive ? 'Positive screening' : 'Negative screening',
+          isPositive
+        };
+      })
+      .sort((a, b) => b.avgProbability - a.avgProbability);
+  }, [sessions, diseaseTasks]);
+
+  const categoryLabelMap: Record<string, string> = {
+    motor: 'Motor and handwriting',
+    coordination: 'Fine coordination',
+    spatial: 'Visuospatial and executive',
+    graphic: 'Graphic function',
+    memory: 'Memory',
+  };
 
 
 
@@ -452,16 +530,35 @@ const Results: React.FC = () => {
             <DiseasePredictionTitle>Disease prediction</DiseasePredictionTitle>
             <DiseasePredictionResult $positive={diseasePredictionPositive}>
               {diseasePredictionPositive
-                ? `Possible signs of ${DISEASE_LABEL} risk indicated`
-                : `No signs of ${DISEASE_LABEL} detected`
+                ? `Possible signs of ${diseaseLabel} risk indicated`
+                : `No signs of ${diseaseLabel} detected`
               }
             </DiseasePredictionResult>
             <DiseasePredictionSub>
+              <strong>{outcomeLabel}:</strong>{' '}
               {diseasePredictionPositive
                 ? `Based on your tasks, the model suggests possible risk (${overallStats.averageScore}% average probability). This is not a diagnosis — please discuss with a healthcare provider.`
-                : `Based on your completed tasks, the model did not detect significant signs of ${DISEASE_LABEL}. This is screening only, not a diagnosis.`
+                : `Based on your completed tasks, the model did not detect significant signs of ${diseaseLabel}. This is screening only, not a diagnosis.`
               }
+              {' '}Your test results are stored in your secure user record for follow-up review.
             </DiseasePredictionSub>
+            {categorySummaries.length > 0 && (
+              <CategorySummaryGrid>
+                {categorySummaries.map((summary) => (
+                  <CategoryCard key={summary.category} $positive={summary.isPositive}>
+                    <CategoryTitle>
+                      {categoryLabelMap[summary.category] || summary.category}
+                    </CategoryTitle>
+                    <CategoryOutcome $positive={summary.isPositive}>
+                      {summary.outcome}
+                    </CategoryOutcome>
+                    <CategoryMeta>
+                      Average probability: {summary.avgProbability}% • Tasks completed: {summary.completedTasks}
+                    </CategoryMeta>
+                  </CategoryCard>
+                ))}
+              </CategorySummaryGrid>
+            )}
           </DiseasePredictionCard>
 
           {/* Overall Statistics */}

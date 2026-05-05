@@ -23,8 +23,9 @@ import {
 } from 'lucide-react';
 import AIAnalysisDisplay from '../components/AIAnalysisDisplay';
 import { enhancedAIAnalysisService, EnhancedAIAnalysisResult } from '../services/enhancedAIAnalysisService';
-import { HandwritingData } from '../services/aiAnalysisService';
+import { AIAnalysisResult, HandwritingData } from '../services/aiAnalysisService';
 import { useDisease } from '../context/DiseaseContext';
+import { getTestResults } from '../services/resultsStorageService';
 
 const ResultsContainer = styled.div`
   padding: 40px 0;
@@ -325,6 +326,59 @@ const DiseasePredictionSub = styled.p`
   margin: 0;
 `;
 
+const toEnhancedFallback = (base: AIAnalysisResult): EnhancedAIAnalysisResult => {
+  const probability = Math.round(base.probability > 1 ? base.probability : base.probability * 100);
+  const riskAsPercent = base.overallRisk === 'high' ? 80 : base.overallRisk === 'moderate' ? 55 : 30;
+  const confidenceScore = Math.max(0, Math.min(100, 100 - Math.abs(probability - riskAsPercent)));
+
+  return {
+    ...base,
+    probability,
+    detailedInsights: {
+      handwritingQuality: {
+        score: Math.round((base.biomarkers?.spatialAccuracy ?? 0) * 100),
+        factors: ['Stroke spacing pattern', 'Shape consistency', 'Spatial alignment'],
+        improvements: ['Practice smooth continuous strokes', 'Use slower deliberate movements']
+      },
+      cognitivePerformance: {
+        score: Math.round((base.biomarkers?.cognitiveLoad ?? 0) * 100),
+        strengths: ['Task completion achieved', 'Consistent interaction pattern'],
+        areasForImprovement: ['Improve rhythm stability', 'Reduce abrupt stroke interruptions']
+      },
+      motorControl: {
+        score: Math.round((base.biomarkers?.temporalConsistency ?? 0) * 100),
+        stability: Math.round((base.biomarkers?.temporalConsistency ?? 0) * 100),
+        precision: Math.round((base.biomarkers?.spatialAccuracy ?? 0) * 100),
+        consistency: Math.round((base.biomarkers?.pressure ?? 0) * 100)
+      },
+      temporalPatterns: {
+        score: Math.round((base.biomarkers?.temporalConsistency ?? 0) * 100),
+        rhythm: Math.round((base.biomarkers?.temporalConsistency ?? 0) * 100),
+        pacing: Math.round((base.biomarkers?.cognitiveLoad ?? 0) * 100),
+        pauses: Math.max(0, 100 - Math.round((base.biomarkers?.temporalConsistency ?? 0) * 100))
+      }
+    },
+    comparativeAnalysis: {
+      percentile: confidenceScore,
+      ageGroupComparison: 'Comparable to expected task-level variation',
+      performanceLevel: base.overallRisk === 'high' ? 'concerning' : base.overallRisk === 'moderate' ? 'average' : 'good',
+      trendAnalysis: 'stable'
+    },
+    clinicalInsights: {
+      riskFactors: base.overallRisk === 'high' ? ['Elevated movement irregularity pattern'] : [],
+      protectiveFactors: base.overallRisk === 'low' ? ['Low overall risk biomarkers'] : ['Some stable motor features observed'],
+      monitoringRecommendations: ['Continue periodic screening tasks', 'Track changes over time in repeated sessions'],
+      followUpTimeline: base.overallRisk === 'high' ? 'Within 2-4 weeks' : 'Within 2-3 months'
+    },
+    personalizedPlan: {
+      immediateActions: ['Repeat one assessment to confirm consistency'],
+      shortTermGoals: ['Maintain regular handwriting and dexterity exercises'],
+      longTermStrategy: ['Continue longitudinal tracking for trend analysis'],
+      resources: ['Consult a clinician for medical interpretation if concerns persist']
+    }
+  };
+};
+
 const AIAnalysisResults: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -342,6 +396,16 @@ const AIAnalysisResults: React.FC = () => {
         // Get task completion data from location state
         const completionData = location.state?.completionData;
         if (!completionData) {
+          const disease = currentDisease || 'alzheimers';
+          const results = await getTestResults();
+          const fallback = results
+            .filter(r => (r.disease || 'alzheimers') === disease && !!r.aiResult)
+            .sort((a, b) => (Date.parse(b.completedAt) || 0) - (Date.parse(a.completedAt) || 0))[0];
+
+          if (fallback?.aiResult) {
+            setAnalysis(toEnhancedFallback(fallback.aiResult));
+            return;
+          }
           throw new Error('No completion data available for analysis');
         }
 
@@ -362,8 +426,23 @@ const AIAnalysisResults: React.FC = () => {
         };
 
         // Perform enhanced AI analysis
-        const result = await enhancedAIAnalysisService.performEnhancedAnalysis(handwritingData, context);
-        setAnalysis(result);
+        try {
+          const result = await enhancedAIAnalysisService.performEnhancedAnalysis(handwritingData, context);
+          setAnalysis(result);
+        } catch (analysisError) {
+          console.warn('Enhanced analysis failed, using fallback from latest saved result:', analysisError);
+          const disease = currentDisease || 'alzheimers';
+          const results = await getTestResults();
+          const fallback = results
+            .filter(r => (r.disease || 'alzheimers') === disease && !!r.aiResult)
+            .sort((a, b) => (Date.parse(b.completedAt) || 0) - (Date.parse(a.completedAt) || 0))[0];
+
+          if (fallback?.aiResult) {
+            setAnalysis(toEnhancedFallback(fallback.aiResult));
+          } else {
+            throw analysisError;
+          }
+        }
 
       } catch (err) {
         console.error('AI analysis failed:', err);
@@ -374,7 +453,7 @@ const AIAnalysisResults: React.FC = () => {
     };
 
     performAnalysis();
-  }, [location.state]);
+  }, [location.state, currentDisease]);
 
   const handleDownloadReport = () => {
     if (!analysis) return;

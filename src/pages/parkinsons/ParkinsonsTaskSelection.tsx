@@ -243,7 +243,7 @@ const ParkinsonsTaskSelection: React.FC = () => {
             </ResearchLabel>
             <TaskSelectionTitle>Parkinson's handwriting tasks</TaskSelectionTitle>
             <TaskSelectionSubtitle>
-              Full AI analysis and results — same pipeline as other NeuroInk handwriting assessments. Not a clinical diagnosis.
+              {`Complete all ${PARKINSONS_TASKS.length} screening tasks across motor, coordination, and visuospatial categories. Results are AI-assisted and stored to your account.`}
             </TaskSelectionSubtitle>
           </motion.div>
         </TaskSelectionHeader>

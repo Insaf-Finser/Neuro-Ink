@@ -687,7 +687,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             )}
           </UserMenu>
         </TopBar>
-        <InstallPrompt />
+        <InstallPrompt disease={effectiveDisease} />
         <Blocker>
           <BlockerCard>
             <NoticeTitle>Add NeuroInk to your home screen</NoticeTitle>
@@ -782,7 +782,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         )}
 
       {/* Only show InstallPrompt on routes that require PWA install */}
-      {requiresPWA && <InstallPrompt />}
+      {requiresPWA && <InstallPrompt disease={effectiveDisease} />}
 
       <Surface $hasNavbar={shouldShowNavbar && !isHomePage} $hasBottomNav={isStandalone && shouldShowNavbar}>
         <Main>{children}</Main>

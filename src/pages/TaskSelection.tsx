@@ -14,7 +14,7 @@ import {
   CheckCircle,
   BarChart3
 } from 'lucide-react';
-import { HANDWRITING_TASKS, TASK_CATEGORIES, getTasksForDisease } from '../data/handwritingTasks';
+import { TASK_CATEGORIES, getTasksForDisease } from '../data/handwritingTasks';
 import { PARKINSONS_TASKS, PARKINSONS_TASK_CATEGORIES } from '../data/parkinsonsTasks';
 import { sessionStorageService } from '../services/sessionStorageService';
 import { getTestResults, getCompletedTaskIds } from '../services/resultsStorageService';
@@ -355,7 +355,7 @@ const TaskSelection: React.FC = () => {
             </TaskSelectionTitle>
             <TaskSelectionSubtitle>
               {currentDisease === 'parkinsons'
-                ? 'Complete all 10 drawing tasks to assess motor control and hand stability. Each task evaluates different motor skills.'
+                ? `Complete all ${tasks.length} screening tasks across motor, coordination, and visuospatial categories.`
                 : 'Complete all 20 handwriting tasks to get a comprehensive cognitive assessment. Each task evaluates different aspects of cognitive function.'}
             </TaskSelectionSubtitle>
           </motion.div>

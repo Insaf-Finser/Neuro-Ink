@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
+import { DiseaseType } from '../context/DiseaseContext';
 
 // Light-weight type to satisfy TypeScript for the deferred prompt event
 type BeforeInstallPromptEvent = Event & {
@@ -74,7 +75,11 @@ const MobileInstruction = styled.span`
   opacity: 0.95;
 `;
 
-const InstallPrompt: React.FC = () => {
+interface InstallPromptProps {
+  disease?: DiseaseType;
+}
+
+const InstallPrompt: React.FC<InstallPromptProps> = ({ disease = 'alzheimers' }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
   const [promptSupported, setPromptSupported] = useState(false);
@@ -127,6 +132,7 @@ const InstallPrompt: React.FC = () => {
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
+    localStorage.setItem('selectedDisease', disease);
     deferredPrompt.prompt();
     await deferredPrompt.userChoice;
     setDeferredPrompt(null);
@@ -140,7 +146,7 @@ const InstallPrompt: React.FC = () => {
   return (
     <Banner>
       <Message>
-        📲 Install NeuroInk for a faster, fullscreen experience.
+        📲 Install {disease === 'parkinsons' ? "Parkinson's" : "Alzheimer's"} NeuroInk app for a faster, fullscreen experience.
       </Message>
       <Actions>
         {promptSupported ? (

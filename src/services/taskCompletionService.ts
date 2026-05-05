@@ -8,6 +8,7 @@ import { DiseaseType } from '../context/DiseaseContext';
 import { saveTestResult } from './resultsStorageService';
 import { getTestNameFromTaskId } from '../utils/testTaskMapping';
 import { StylusPoint } from './stylusInputService';
+import { parkinsonsBlstmInferenceService } from './parkinsonsBlstmInferenceService';
 
 export type NormalizedStroke = {
   points: StylusPoint[];
@@ -90,13 +91,19 @@ class TaskCompletionService {
         };
       }
 
-      // Perform enhanced AI analysis if enabled and conditions are met
+      // Perform AI analysis if enabled and conditions are met
       let aiAnalysis = null;
       if (this.AI_ANALYSIS_ENABLED && this.shouldPerformAIAnalysis(data)) {
         try {
-          console.log('Performing enhanced AI analysis...');
-          aiAnalysis = await this.performEnhancedAIAnalysis(data);
-          console.log('Enhanced AI analysis completed:', aiAnalysis);
+          if (disease === 'parkinsons') {
+            console.log('Performing Parkinson disease-specific AI analysis...');
+            aiAnalysis = await this.performAIAnalysis(data);
+            console.log('Parkinson analysis completed:', aiAnalysis);
+          } else {
+            console.log('Performing enhanced AI analysis...');
+            aiAnalysis = await this.performEnhancedAIAnalysis(data);
+            console.log('Enhanced AI analysis completed:', aiAnalysis);
+          }
         } catch (error) {
           console.warn('Enhanced AI analysis failed, falling back to basic analysis:', error);
           try {
@@ -107,43 +114,46 @@ class TaskCompletionService {
           }
         }
       }
-
-      // Also save to Firestore via resultsStorageService
-      try {
-        const testName = getTestNameFromTaskId(data.taskId) || data.taskId;
-        await saveTestResult(
-          {
-            testName,
-            taskId: data.taskId,
-            durationMs: data.elapsedTime * 1000, // elapsedTime is in seconds, convert to milliseconds
-            validation: undefined,
-            aiResult: aiAnalysis ? {
-              overallRisk: 'overallRisk' in aiAnalysis ? aiAnalysis.overallRisk : (aiAnalysis.darwinRiskLevel || 'low'),
-              probability: 'probability' in aiAnalysis ? aiAnalysis.probability : (aiAnalysis.darwinPrediction || 0.5),
-              testScores: 'testScores' in aiAnalysis ? aiAnalysis.testScores : {
-                clockDrawing: 0.8,
-                wordRecall: 0.8,
-                imageAssociation: 0.8,
-                selectionMemory: 0.8
-              },
-              biomarkers: 'biomarkers' in aiAnalysis ? aiAnalysis.biomarkers : {
-                pressure: aiAnalysis.pressure || 0.5,
-                spatialAccuracy: aiAnalysis.spatialAccuracy || 0.5,
-                temporalConsistency: aiAnalysis.temporalConsistency || 0.5,
-                cognitiveLoad: aiAnalysis.cognitiveLoad || 0.5
-              },
-              recommendations: 'recommendations' in aiAnalysis ? aiAnalysis.recommendations : []
-            } : undefined,
-            features: this.extractFeatureNames(data)
-          },
-          undefined, // userId will be determined by saveTestResult
-          disease
-        );
-        console.log(`Test result saved to Firestore for task: ${data.taskId}`);
-      } catch (error) {
-        console.error('Error saving test result to Firestore:', error);
-        // Don't fail the entire completion if Firestore save fails
+      if (!aiAnalysis) {
+        try {
+          aiAnalysis = await this.performAIAnalysis(data);
+        } catch (finalFallbackError) {
+          console.warn('Final fallback AI analysis failed:', finalFallbackError);
+        }
       }
+
+      // Save to Firestore via resultsStorageService (cloud-only requirement).
+      // If this fails, task completion must fail so UI does not show false progress.
+      const testName = getTestNameFromTaskId(data.taskId) || data.taskId;
+      await saveTestResult(
+        {
+          testName,
+          taskId: data.taskId,
+          durationMs: data.elapsedTime * 1000, // elapsedTime is in seconds, convert to milliseconds
+          validation: undefined,
+          aiResult: aiAnalysis ? {
+            overallRisk: 'overallRisk' in aiAnalysis ? aiAnalysis.overallRisk : (aiAnalysis.darwinRiskLevel || 'low'),
+            probability: 'probability' in aiAnalysis ? aiAnalysis.probability : (aiAnalysis.darwinPrediction || 0.5),
+            testScores: 'testScores' in aiAnalysis ? aiAnalysis.testScores : {
+              clockDrawing: 0.8,
+              wordRecall: 0.8,
+              imageAssociation: 0.8,
+              selectionMemory: 0.8
+            },
+            biomarkers: 'biomarkers' in aiAnalysis ? aiAnalysis.biomarkers : {
+              pressure: aiAnalysis.pressure || 0.5,
+              spatialAccuracy: aiAnalysis.spatialAccuracy || 0.5,
+              temporalConsistency: aiAnalysis.temporalConsistency || 0.5,
+              cognitiveLoad: aiAnalysis.cognitiveLoad || 0.5
+            },
+            recommendations: 'recommendations' in aiAnalysis ? aiAnalysis.recommendations : []
+          } : undefined,
+          features: this.extractFeatureNames(data)
+        },
+        undefined, // userId will be determined by saveTestResult
+        disease
+      );
+      console.log(`Test result saved to Firestore for task: ${data.taskId}`);
 
       // Generate session ID
       const sessionId = `task_${data.taskId}_${Date.now()}`;
@@ -253,7 +263,11 @@ class TaskCompletionService {
    */
   private shouldPerformAIAnalysis(data: TaskCompletionNormalized): boolean {
     // Check minimum requirements for AI analysis
-    const hasEnoughStrokes = data.strokes.length >= this.MIN_STROKES_FOR_ANALYSIS;
+    const disease: DiseaseType = data.disease || 'alzheimers';
+    const totalPoints = data.strokes.reduce((sum, stroke) => sum + (stroke.points?.length || 0), 0);
+    const hasEnoughStrokes = disease === 'parkinsons'
+      ? data.strokes.length >= 1 && totalPoints >= 10
+      : data.strokes.length >= this.MIN_STROKES_FOR_ANALYSIS;
     const hasEnoughTime = data.elapsedTime >= this.MIN_DRAWING_TIME;
     const hasValidStrokes = data.strokes.every(stroke => 
       stroke.points && stroke.points.length > 0
@@ -268,6 +282,7 @@ class TaskCompletionService {
   private async performEnhancedAIAnalysis(data: TaskCompletionNormalized): Promise<EnhancedAIAnalysisResult> {
     // Convert completion data to handwriting data format
     const handwritingData = {
+      taskId: data.taskId,
       strokes: data.strokes,
       totalTime: data.elapsedTime,
       canvasSize: data.canvasSize
@@ -294,6 +309,7 @@ class TaskCompletionService {
   private async performAIAnalysis(data: TaskCompletionNormalized) {
     // Convert completion data to handwriting data format
     const handwritingData = {
+      taskId: data.taskId,
       strokes: data.strokes,
       totalTime: data.elapsedTime,
       canvasSize: data.canvasSize
@@ -303,8 +319,26 @@ class TaskCompletionService {
     const disease: DiseaseType = data.disease || 'alzheimers';
     const analysisService = AnalysisServiceFactory.getService(disease);
     const analysisResult = analysisService.analyzeHandwriting(handwritingData);
-    
-    return analysisResult;
+
+    if (disease !== 'parkinsons') {
+      return analysisResult;
+    }
+
+    const blstmProbability = await parkinsonsBlstmInferenceService.predictProbability(handwritingData);
+    if (blstmProbability === null) {
+      return analysisResult;
+    }
+
+    const riskLevel: 'low' | 'moderate' | 'high' =
+      blstmProbability < 0.3 ? 'low' : blstmProbability < 0.6 ? 'moderate' : 'high';
+
+    return {
+      ...analysisResult,
+      darwinPrediction: blstmProbability,
+      darwinRiskLevel: riskLevel,
+      modelVersion: 'BLSTM-PaHaW-direct',
+      clinicalValidation: 'Direct BLSTM inference from parkmodel/Parkinsons-Detection'
+    };
   }
 
   /**

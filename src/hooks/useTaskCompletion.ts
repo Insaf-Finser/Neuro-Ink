@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { taskCompletionService, type NormalizedStroke } from '../services/taskCompletionService';
 import { getTasksForDisease } from '../data/handwritingTasks';
 import { useDisease } from '../context/DiseaseContext';
+import type { DiseaseType } from '../context/DiseaseContext';
 import { StylusPoint } from '../services/stylusInputService';
 
 export interface TaskCompletionState {
@@ -18,6 +19,7 @@ export interface TaskCompletionData {
   elapsedTime: number;
   strokes: StylusPoint[][] | NormalizedStroke[];
   canvasSize: { width: number; height: number };
+  disease?: DiseaseType;
   userInteractions?: {
     pauseCount: number;
     clearCount: number;
@@ -38,7 +40,8 @@ export const useTaskCompletion = () => {
     setCompletionError(null);
     
     try {
-      const tasks = getTasksForDisease(currentDisease);
+      const effectiveDisease = completionData.disease || currentDisease;
+      const tasks = getTasksForDisease(effectiveDisease);
       const task = tasks.find(t => t.id === completionData.taskId);
       if (!task) {
         throw new Error('Task not found');
@@ -50,7 +53,7 @@ export const useTaskCompletion = () => {
         category: task.category,
         difficulty: task.difficulty,
         timeLimit: task.timeLimit || 0,
-        disease: currentDisease,
+        disease: effectiveDisease,
         elapsedTime: completionData.elapsedTime,
         strokes: completionData.strokes,
         canvasSize: completionData.canvasSize,

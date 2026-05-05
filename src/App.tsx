@@ -42,8 +42,6 @@ import { DiseaseRouteRedirect } from './components/DiseaseRoute';
 import DiseaseAwareness from './pages/DiseaseAwareness';
 import ParkinsonsTaskSelection from './pages/parkinsons/ParkinsonsTaskSelection';
 import ParkinsonsTest from './pages/parkinsons/ParkinsonsTest';
-import AssessmentTest from './pages/AssessmentTest';
-import AssessmentResults from './pages/AssessmentResults';
 
 function App() {
   return (
@@ -67,13 +65,13 @@ function App() {
           <Route path="/parkinsons/ai-analysis" element={<ProtectedRoute><RequireConsent><AIAnalysisResults /></RequireConsent></ProtectedRoute>} />
           <Route path="/parkinsons/cognitive-results" element={<ProtectedRoute><RequireConsent><Results /></RequireConsent></ProtectedRoute>} />
           
-          {/* Parkinson's assessment routes (PWA-based, authenticated, unified) - Mobile/Tablet only */}
-          <Route path="/parkinsons/assessment-test/:taskId" element={<ProtectedRoute><MobileOnlyRoute><AssessmentTest /></MobileOnlyRoute></ProtectedRoute>} />
-          <Route path="/parkinsons/assessment-results" element={<ProtectedRoute><MobileOnlyRoute><AssessmentResults /></MobileOnlyRoute></ProtectedRoute>} />
+          {/* Backward-compatible Parkinson's assessment routes -> real Parkinson's tests flow */}
+          <Route path="/parkinsons/assessment-test/:taskId" element={<Navigate to="/parkinsons/tests" replace />} />
+          <Route path="/parkinsons/assessment-results" element={<Navigate to="/parkinsons/cognitive-results" replace />} />
           {/* Parkinson's nav targets: dashboard/tasks/results point to disease-specific pages */}
           <Route path="/parkinsons/dashboard" element={<Navigate to="/parkinsons" replace />} />
           <Route path="/parkinsons/tasks" element={<Navigate to="/parkinsons" replace />} />
-          <Route path="/parkinsons/results" element={<Navigate to="/parkinsons/assessment-results" replace />} />
+          <Route path="/parkinsons/results" element={<Navigate to="/parkinsons/cognitive-results" replace />} />
           
           {/* Old routes (will be redirected internally to disease-scoped routes) */}
           <Route path="/dashboard" element={<ProtectedRoute><RequireConsent><Dashboard /></RequireConsent></ProtectedRoute>} />

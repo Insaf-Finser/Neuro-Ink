@@ -162,7 +162,9 @@ npm run build
 
 ### Parkinson's (BLSTM-style)
 - **Source**: `parkmodel/Parkinsons-Detection/` (PaHaW dataset, BLSTM notebooks)
-- **Frontend**: `ParkinsonsAnalysisService` – on-device feature extraction and heuristic scoring calibrated to PaHaW metrics
+- **Frontend**:
+  - `ParkinsonsAnalysisService` – disease-specific feature extraction + PaHaW-calibrated fallback scoring
+  - Optional direct BLSTM inference via TensorFlow.js from `public/models/parkinsons-blstm/model.json`
 - **Features**: Path length, velocity, stroke/pause timing, pressure
 - **Output**: PD probability, risk level, motor biomarkers
 

@@ -5,6 +5,9 @@ import { db, auth } from '../firebase';
 import { getTaskIdFromTestName } from '../utils/testTaskMapping';
 import { DiseaseType } from '../context/DiseaseContext';
 
+const ALZHEIMERS_RESULTS_COLLECTION = 'testResults';
+const PARKINSONS_RESULTS_COLLECTION = 'testResultsParkinsons';
+
 export interface StoredTestResult {
   testName: string;
   taskId?: string; // Task ID for progress tracking
@@ -17,12 +20,6 @@ export interface StoredTestResult {
   disease?: 'alzheimers' | 'parkinsons'; // Disease type (defaults to 'alzheimers' for backward compatibility)
   // Firestore document ID (optional, added when fetched from Firestore)
   id?: string;
-}
-
-const STORAGE_KEY_PREFIX = 'neuroink.results.';
-
-function getUserKey(userId: string) {
-  return `${STORAGE_KEY_PREFIX}${userId}`;
 }
 
 /**
@@ -70,16 +67,27 @@ function timestampToISO(timestamp: any): string {
   return new Date().toISOString();
 }
 
+function collectionForDisease(disease: DiseaseType): string {
+  return disease === 'parkinsons' ? PARKINSONS_RESULTS_COLLECTION : ALZHEIMERS_RESULTS_COLLECTION;
+}
+
 /**
- * Saves a test result to Firestore (for authenticated users) and localStorage (as fallback/cache)
- * Priority: Firestore first for authenticated users, localStorage as fallback
+ * Saves a test result to Firestore only (authenticated user required)
  */
 export async function saveTestResult(
   result: Omit<StoredTestResult, 'userId' | 'completedAt'>, 
   userId?: string,
   disease?: DiseaseType
 ): Promise<StoredTestResult> {
-  const id = userId || getUserId();
+  const requestedUserId = userId || getUserId();
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('Authenticated user required to save test results.');
+  }
+  if (requestedUserId !== 'guest' && requestedUserId !== user.uid) {
+    throw new Error('User mismatch while saving test results.');
+  }
+
   const completedAt = new Date().toISOString();
   
   // Automatically map testName to taskId if not provided
@@ -91,109 +99,82 @@ export async function saveTestResult(
   const entry: StoredTestResult = {
     ...result,
     taskId,
-    userId: id,
+    userId: user.uid,
     completedAt,
     disease: diseaseType
   };
 
-  // Save to Firestore FIRST if user is authenticated
-  const user = auth.currentUser;
-  let firestoreSaveSuccess = false;
-  if (user && id !== 'guest') {
-    try {
-      const testResultsRef = collection(db, 'users', user.uid, 'testResults');
-      const docRef = await addDoc(testResultsRef, {
-        ...result,
-        taskId,
-        userId: user.uid,
-        disease: diseaseType,
-        completedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
-      });
-      // Add Firestore document ID to entry
-      entry.id = docRef.id;
-      firestoreSaveSuccess = true;
-      console.log(`Test result saved to Firestore for user ${user.uid}, task: ${result.testName}`);
-    } catch (error) {
-      console.error('Error saving test result to Firestore:', error);
-      // Continue to localStorage as fallback
-    }
-  }
-
-  // For authenticated users: store results in Firestore (source of truth).
-  // Only fall back to localStorage if Firestore fails.
-  // For guests: store in localStorage.
-  const shouldWriteLocal =
-    id === 'guest' ||
-    (!firestoreSaveSuccess && Boolean(user) && id !== 'guest');
-
-  if (shouldWriteLocal) {
-    const key = getUserKey(id);
-    const existing: StoredTestResult[] = JSON.parse(localStorage.getItem(key) || '[]');
-    const updated = [...existing, entry];
-    localStorage.setItem(key, JSON.stringify(updated));
-  }
-
-  if (firestoreSaveSuccess) {
-    console.log(`Results saved to Firestore`);
-  } else if (user && id !== 'guest') {
-    console.warn(`Results saved to localStorage only (Firestore sync failed for user ${user.uid})`);
-  }
+  const targetCollection = collectionForDisease(diseaseType);
+  const diseaseResultsRef = collection(db, 'users', user.uid, targetCollection);
+  const firestorePayload = {
+    ...result,
+    taskId,
+    userId: user.uid,
+    disease: diseaseType,
+    completedAt: serverTimestamp(),
+    createdAt: serverTimestamp()
+  };
+  const sanitizedPayload = Object.fromEntries(
+    Object.entries(firestorePayload).filter(([, value]) => value !== undefined)
+  );
+  const docRef = await addDoc(diseaseResultsRef, sanitizedPayload);
+  entry.id = docRef.id;
+  console.log(`Results saved to Firestore for user ${user.uid}`);
 
   return entry;
 }
 
 /**
- * Fetches test results from Firestore (for authenticated users) or localStorage (fallback)
- * For authenticated users, prioritizes Firestore data and syncs to localStorage
+ * Fetches test results from Firestore only (authenticated user required)
  */
 export async function getTestResults(userId?: string): Promise<StoredTestResult[]> {
-  const id = userId || getUserId();
-  
-  // Try Firestore first for authenticated users - PRIORITY for authenticated users
+  const requestedUserId = userId || getUserId();
   const user = auth.currentUser;
-  if (user && id !== 'guest') {
-    try {
-      const testResultsRef = collection(db, 'users', user.uid, 'testResults');
-      const q = query(testResultsRef, orderBy('completedAt', 'desc'));
-      const querySnapshot = await getDocs(q);
-      
-      const results: StoredTestResult[] = [];
-      querySnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        // Default to 'alzheimers' for backward compatibility if disease not present
-        const diseaseType: DiseaseType = data.disease || 'alzheimers';
-        results.push({
-          testName: data.testName,
-          taskId: data.taskId || getTaskIdFromTestName(data.testName) || undefined,
-          userId: data.userId || user.uid,
-          completedAt: timestampToISO(data.completedAt),
-          durationMs: data.durationMs || 0,
-          validation: data.validation || null,
-          aiResult: data.aiResult || null,
-          features: data.features || null,
-          disease: diseaseType,
-          id: docSnap.id
-        });
-      });
-
-      console.log(`Fetched ${results.length} results from Firestore for user ${user.uid}`);
-      return results;
-    } catch (error) {
-      console.error('Error fetching test results from Firestore:', error);
-      // Fall through to localStorage fallback
-    }
+  if (!user) {
+    throw new Error('Authenticated user required to fetch test results.');
+  }
+  if (requestedUserId !== 'guest' && requestedUserId !== user.uid) {
+    throw new Error('User mismatch while fetching test results.');
   }
 
-  // Fallback to localStorage (for guests or if Firestore fails)
-  const key = getUserKey(id);
-  const results = JSON.parse(localStorage.getItem(key) || '[]');
-  
-  // Ensure all results have disease field (default to 'alzheimers' for backward compatibility)
-  return results.map((result: StoredTestResult) => ({
-    ...result,
-    disease: result.disease || 'alzheimers'
-  }));
+  const fetchCollectionResults = async (
+    collectionName: string,
+    fallbackDisease: DiseaseType
+  ): Promise<StoredTestResult[]> => {
+    const resultsRef = collection(db, 'users', user.uid, collectionName);
+    const q = query(resultsRef, orderBy('completedAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    const results: StoredTestResult[] = [];
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const diseaseType: DiseaseType = data.disease || fallbackDisease;
+      results.push({
+        testName: data.testName,
+        taskId: data.taskId || getTaskIdFromTestName(data.testName) || undefined,
+        userId: data.userId || user.uid,
+        completedAt: timestampToISO(data.completedAt),
+        durationMs: data.durationMs || 0,
+        validation: data.validation || null,
+        aiResult: data.aiResult || null,
+        features: data.features || null,
+        disease: diseaseType,
+        id: docSnap.id
+      });
+    });
+    return results;
+  };
+
+  const [alzheimersResults, parkinsonsResults] = await Promise.all([
+    fetchCollectionResults(ALZHEIMERS_RESULTS_COLLECTION, 'alzheimers'),
+    fetchCollectionResults(PARKINSONS_RESULTS_COLLECTION, 'parkinsons')
+  ]);
+
+  const merged = [...alzheimersResults, ...parkinsonsResults].sort(
+    (a, b) => (Date.parse(b.completedAt) || 0) - (Date.parse(a.completedAt) || 0)
+  );
+
+  console.log(`Fetched ${merged.length} results from Firestore for user ${user.uid}`);
+  return merged;
 }
 
 /**
@@ -213,32 +194,31 @@ export async function getCompletedTaskIds(userId?: string): Promise<string[]> {
 }
 
 /**
- * Clears test results from both Firestore and localStorage
+ * Clears test results from Firestore only (authenticated user required)
  */
 export async function clearTestResults(userId?: string): Promise<void> {
-  const id = userId || getUserId();
-  
-  // Clear from localStorage
-  const key = getUserKey(id);
-  localStorage.removeItem(key);
-
-  // Clear from Firestore if user is authenticated
+  const requestedUserId = userId || getUserId();
   const user = auth.currentUser;
-  if (user && id !== 'guest') {
-    try {
-      const testResultsRef = collection(db, 'users', user.uid, 'testResults');
-      const querySnapshot = await getDocs(testResultsRef);
-      
-      const deletePromises = querySnapshot.docs.map((docSnap) => 
-        deleteDoc(doc(db, 'users', user.uid, 'testResults', docSnap.id))
-      );
-      
-      await Promise.all(deletePromises);
-    } catch (error) {
-      console.error('Error clearing test results from Firestore:', error);
-      // Continue even if Firestore clear fails
-    }
+  if (!user) {
+    throw new Error('Authenticated user required to clear test results.');
   }
+  if (requestedUserId !== 'guest' && requestedUserId !== user.uid) {
+    throw new Error('User mismatch while clearing test results.');
+  }
+
+  const clearCollection = async (collectionName: string) => {
+    const testResultsRef = collection(db, 'users', user.uid, collectionName);
+    const querySnapshot = await getDocs(testResultsRef);
+    const deletePromises = querySnapshot.docs.map((docSnap) =>
+      deleteDoc(doc(db, 'users', user.uid, collectionName, docSnap.id))
+    );
+    await Promise.all(deletePromises);
+  };
+
+  await Promise.all([
+    clearCollection(ALZHEIMERS_RESULTS_COLLECTION),
+    clearCollection(PARKINSONS_RESULTS_COLLECTION)
+  ]);
 }
 
 

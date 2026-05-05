@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { RotateCcw, CheckCircle, AlertCircle, Clock, Home, Check } from 'lucide-react';
@@ -8,7 +8,7 @@ import { PARKINSONS_TASKS } from '../../data/parkinsonsTasks';
 import { getTasksForDisease } from '../../data/handwritingTasks';
 import { ReferenceShapeConfig } from '../../utils/referenceShapes';
 import { useTaskCompletion } from '../../hooks/useTaskCompletion';
-import { getNextTaskId } from '../../utils/testTaskMapping';
+import { getTestResults } from '../../services/resultsStorageService';
 
 const Container = styled.div`
   padding: 16px 0;
@@ -146,14 +146,167 @@ const TimerText = styled.div`
   color: #667eea;
 `;
 
+const TaskProgressWrap = styled.div`
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #f8fafc;
+`;
+
+const TaskProgressHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #334155;
+  font-weight: 600;
+`;
+
+const TaskProgressBar = styled.div`
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+  margin-bottom: 10px;
+`;
+
+const TaskProgressFill = styled.div<{ $percent: number }>`
+  width: ${props => props.$percent}%;
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  transition: width 0.25s ease;
+`;
+
+const TaskDots = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(30px, 1fr));
+  gap: 8px;
+`;
+
+const TaskDot = styled.div<{ $state: 'completed' | 'current' | 'pending' }>`
+  height: 30px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  border: 2px solid ${props =>
+    props.$state === 'completed' ? '#10b981' :
+    props.$state === 'current' ? '#667eea' : '#cbd5e1'
+  };
+  background: ${props =>
+    props.$state === 'completed' ? '#ecfdf5' :
+    props.$state === 'current' ? '#eef2ff' : '#f8fafc'
+  };
+  color: ${props =>
+    props.$state === 'completed' ? '#047857' :
+    props.$state === 'current' ? '#4338ca' : '#64748b'
+  };
+`;
+
+const TaskResultCard = styled.div`
+  margin-top: 16px;
+  margin-bottom: 8px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #dbeafe;
+`;
+
+const TaskResultTitle = styled.div`
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 8px;
+`;
+
+const TaskResultGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+`;
+
+const TaskResultItem = styled.div`
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+`;
+
+const TaskResultLabel = styled.div`
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 2px;
+`;
+
+const TaskResultValue = styled.div`
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+`;
+
+const DotOverlayContainer = styled.div`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+`;
+
+const DotLabel = styled.div<{ $top: number; $left: number; $connected?: boolean }>`
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: ${props => (props.$connected ? '#667eea' : 'rgba(255, 255, 255, 0.95)')};
+  border: 2px solid #667eea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: ${props => (props.$connected ? '#fff' : '#1f2933')};
+  transform: translate(-50%, -50%);
+  top: ${props => props.$top}%;
+  left: ${props => props.$left}%;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+`;
+
 function referenceForTask(taskId: string): ReferenceShapeConfig | undefined {
   switch (taskId) {
     case 'spiral_drawing':
       return { type: 'spiral' };
     case 'line_tracing':
       return { type: 'line' };
+    case 'dot_target_tapping':
+      return undefined;
+    case 'clock_layout_copy':
+      return { type: 'circle' };
+    case 'symmetry_copy':
+      return { type: 'patternBoxes' };
+    case 'maze_path_trace':
+      return undefined;
     default:
       return undefined;
+  }
+}
+
+function drawingPlaceholderForTask(taskId: string, hasStarted: boolean, submitDone: boolean): string {
+  if (!hasStarted) return 'Tap canvas to start';
+  if (submitDone) return 'Task complete';
+  switch (taskId) {
+    case 'trail_making':
+      return 'Trace the alternating sequence path';
+    case 'micrographia_sentence':
+      return 'Write the sentence three times';
+    case 'rapid_stroke_repetition':
+      return 'Repeat short vertical strokes';
+    case 'signature_repetition':
+      return 'Write your signature 3 times';
+    default:
+      return 'Draw here…';
   }
 }
 
@@ -165,7 +318,6 @@ const ParkinsonsTest: React.FC = () => {
 
   const task = PARKINSONS_TASKS.find(t => t.id === taskId) ?? null;
   const tasks = getTasksForDisease('parkinsons');
-  const hwTask = tasks.find(t => t.id === taskId) ?? null;
   const taskIndex = tasks.findIndex(t => t.id === taskId);
   const totalSteps = tasks.length;
 
@@ -174,10 +326,45 @@ const ParkinsonsTest: React.FC = () => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [submitDone, setSubmitDone] = useState(false);
+  const [taskResult, setTaskResult] = useState<any | null>(null);
+  const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set());
+  const [dotConnectedIndices, setDotConnectedIndices] = useState<number[]>([]);
+  const [dotLastReachedIndex, setDotLastReachedIndex] = useState(-1);
+  const [dotCurrentPath, setDotCurrentPath] = useState<any[]>([]);
   const submitStartedRef = useRef(false);
+  const dotLayout = useMemo(
+    () => [
+      { n: 1, top: 22, left: 20 },
+      { n: 2, top: 20, left: 50 },
+      { n: 3, top: 26, left: 80 },
+    ],
+    []
+  );
+  const isDotTask = task?.id === 'dot_target_tapping';
+
+  useEffect(() => {
+    let cancelled = false;
+    getTestResults()
+      .then((results) => {
+        if (cancelled) return;
+        const ids = new Set(
+          results
+            .filter((r) => (r.disease || 'alzheimers') === 'parkinsons' && !!r.taskId)
+            .map((r) => r.taskId as string)
+        );
+        setCompletedTaskIds(ids);
+      })
+      .catch(() => {
+        if (!cancelled) setCompletedTaskIds(new Set());
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [taskId]);
 
   const runSubmit = useCallback(async () => {
-    if (!task || !hwTask) return;
+    if (!task) return;
     if (submitDone || isCompleting || submitStartedRef.current) return;
     submitStartedRef.current = true;
     const strokes = canvasRef.current?.getAllStrokes() || [];
@@ -191,30 +378,24 @@ const ParkinsonsTest: React.FC = () => {
     const elapsed = Math.max(1, timeElapsed || task.timeLimit || 1);
 
     try {
-      await completeTask({
+      const result = await completeTask({
         taskId: task.id,
+        disease: 'parkinsons',
         elapsedTime: elapsed,
         strokes,
         canvasSize
       });
       setSubmitDone(true);
-      navigate('/parkinsons/ai-analysis', {
-        state: {
-          completionData: {
-            taskId: task.id,
-            taskName: task.name,
-            category: hwTask.category,
-            difficulty: task.difficulty,
-            elapsedTime: elapsed,
-            strokes,
-            canvasSize
-          }
-        }
+      setCompletedTaskIds(prev => {
+        const next = new Set(prev);
+        next.add(task.id);
+        return next;
       });
+      setTaskResult(result?.aiAnalysis || null);
     } catch {
       submitStartedRef.current = false;
     }
-  }, [task, hwTask, submitDone, isCompleting, timeElapsed, completeTask, navigate]);
+  }, [task, submitDone, isCompleting, timeElapsed, completeTask]);
 
   useEffect(() => {
     if (!task?.timeLimit) return;
@@ -223,7 +404,21 @@ const ParkinsonsTest: React.FC = () => {
 
   useEffect(() => {
     submitStartedRef.current = false;
-  }, [taskId]);
+    setHasStarted(false);
+    setIsDrawing(false);
+    setTimeElapsed(0);
+    setSubmitDone(false);
+    if (task?.timeLimit != null) {
+      setTimeRemaining(task.timeLimit);
+    } else {
+      setTimeRemaining(null);
+    }
+    setTaskResult(null);
+    setDotConnectedIndices([]);
+    setDotLastReachedIndex(-1);
+    setDotCurrentPath([]);
+    canvasRef.current?.clear();
+  }, [taskId, task?.timeLimit]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
@@ -247,7 +442,7 @@ const ParkinsonsTest: React.FC = () => {
     }
   }, [timeRemaining, hasStarted, submitDone, runSubmit]);
 
-  if (!task || !hwTask) {
+  if (!task) {
     return (
       <Container>
         <StatusCard $status="waiting">
@@ -292,17 +487,54 @@ const ParkinsonsTest: React.FC = () => {
     setTimeElapsed(0);
     setTimeRemaining(task.timeLimit ?? null);
     setSubmitDone(false);
+    setTaskResult(null);
+    setDotConnectedIndices([]);
+    setDotLastReachedIndex(-1);
+    setDotCurrentPath([]);
     submitStartedRef.current = false;
   };
 
+  const pointToNorm = (p: any) => {
+    const size = canvasRef.current?.getCanvasSize() || { width: 1, height: 1 };
+    return { x: p.x / Math.max(1, size.width), y: p.y / Math.max(1, size.height) };
+  };
+
+  const findHitDotIndex = (p: any) => {
+    const np = pointToNorm(p);
+    for (let i = 0; i < dotLayout.length; i++) {
+      const d = dotLayout[i];
+      if (Math.hypot(np.x - d.left / 100, np.y - d.top / 100) < 0.08) return i;
+    }
+    return -1;
+  };
+
+  const completeDotSegment = (startIdx: number, endIdx: number) => {
+    setDotConnectedIndices(prev => {
+      const next = [...prev];
+      if (!next.includes(startIdx)) next.push(startIdx);
+      if (!next.includes(endIdx)) next.push(endIdx);
+      return next;
+    });
+    setDotLastReachedIndex(endIdx);
+    setDotCurrentPath([]);
+  };
+
   const handleHarnessNext = () => {
-    const nextId = getNextTaskId(task.id, 'parkinsons');
-    if (nextId) {
-      navigate(`/parkinsons/test/${nextId}`);
+    const nextTask = taskIndex >= 0 ? tasks[taskIndex + 1] : undefined;
+    if (nextTask) {
+      navigate(`/parkinsons/test/${nextTask.id}`);
     } else {
       navigate('/parkinsons/cognitive-results');
     }
   };
+
+  const rawProbability = taskResult?.probability ?? taskResult?.darwinPrediction ?? null;
+  const probabilityPercent = rawProbability == null
+    ? null
+    : Math.round(rawProbability > 1 ? rawProbability : rawProbability * 100);
+  const riskLabel = String(taskResult?.overallRisk || taskResult?.darwinRiskLevel || 'unknown').toUpperCase();
+  const completedCount = tasks.filter((t) => completedTaskIds.has(t.id)).length;
+  const progressPercent = totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
 
   const instructions = (
     <Instructions>
@@ -314,6 +546,11 @@ const ParkinsonsTest: React.FC = () => {
         <InstructionText style={{ marginTop: 12, fontWeight: 700 }}>
           <Clock size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
           Time limit: {task.timeLimit} seconds
+        </InstructionText>
+      )}
+      {isDotTask && (
+        <InstructionText style={{ marginTop: 8 }}>
+          Connect dots in exact order: 1 → 2 → 3
         </InstructionText>
       )}
     </Instructions>
@@ -342,11 +579,36 @@ const ParkinsonsTest: React.FC = () => {
           </ResearchText>
         </ResearchBanner>
 
+        <TaskProgressWrap>
+          <TaskProgressHeader>
+            <span>Task Progress</span>
+            <span>{completedCount}/{totalSteps} completed</span>
+          </TaskProgressHeader>
+          <TaskProgressBar>
+            <TaskProgressFill $percent={progressPercent} />
+          </TaskProgressBar>
+          <TaskDots>
+            {tasks.map((t, idx) => {
+              const state: 'completed' | 'current' | 'pending' =
+                completedTaskIds.has(t.id)
+                  ? 'completed'
+                  : t.id === task.id
+                    ? 'current'
+                    : 'pending';
+              return (
+                <TaskDot key={t.id} $state={state} title={`${idx + 1}. ${t.name}`}>
+                  {state === 'completed' ? '✓' : idx + 1}
+                </TaskDot>
+              );
+            })}
+          </TaskDots>
+        </TaskProgressWrap>
+
         <StatusCard $status={getStatus()}>
           {getStatus() === 'completed' ? <CheckCircle size={20} /> : getStatus() === 'drawing' ? <AlertCircle size={20} /> : <Clock size={20} />}
           <StatusText $status={getStatus()}>
             {submitDone
-              ? 'Saved — review AI analysis.'
+              ? 'Saved — continue to the next task.'
               : timeRemaining === 0
                 ? 'Time is up — submitting…'
                 : isDrawing
@@ -373,19 +635,47 @@ const ParkinsonsTest: React.FC = () => {
         )}
 
         <div style={{ position: 'relative' }}>
+          {isDotTask && (
+            <DotOverlayContainer>
+              {dotLayout.map((dot, idx) => (
+                <DotLabel key={dot.n} $top={dot.top} $left={dot.left} $connected={dotConnectedIndices.includes(idx)}>
+                  {dot.n}
+                </DotLabel>
+              ))}
+            </DotOverlayContainer>
+          )}
           <DrawingCanvas
+            key={task.id}
             ref={canvasRef}
             disabled={!hasStarted || submitDone}
-            placeholder={
-              !hasStarted
-                ? 'Tap canvas to start'
-                : submitDone
-                  ? 'Task complete'
-                  : 'Draw here…'
-            }
+            placeholder={drawingPlaceholderForTask(task.id, hasStarted, submitDone)}
             onTap={handleCanvasTap}
-            onStrokeStart={() => setIsDrawing(true)}
-            onStrokeEnd={() => setIsDrawing(false)}
+            onStrokeStart={(p) => {
+              if (isDotTask) {
+                const expectedStart = dotLastReachedIndex === -1 ? 0 : dotLastReachedIndex;
+                const hit = findHitDotIndex(p);
+                if (hit !== expectedStart) return;
+                setDotCurrentPath([p]);
+              }
+              setIsDrawing(true);
+            }}
+            onPointAdded={(p) => {
+              if (!isDotTask || submitDone) return;
+              setDotCurrentPath(prev => {
+                const next = [...prev, p];
+                const hit = findHitDotIndex(p);
+                const start = dotLastReachedIndex === -1 ? 0 : dotLastReachedIndex;
+                const target = start + 1;
+                if (hit === target && target < dotLayout.length) {
+                  completeDotSegment(start, target);
+                }
+                return next;
+              });
+            }}
+            onStrokeEnd={() => {
+              setIsDrawing(false);
+              if (isDotTask && !submitDone) setDotCurrentPath([]);
+            }}
             referenceShape={refShape}
           />
         </div>
@@ -396,7 +686,11 @@ const ParkinsonsTest: React.FC = () => {
               <RotateCcw size={16} />
               Clear
             </Button>
-            <Button $variant="primary" onClick={() => void handleSubmit()} disabled={isCompleting}>
+            <Button
+              $variant="primary"
+              onClick={() => void handleSubmit()}
+              disabled={isCompleting || (isDotTask && dotConnectedIndices.length < dotLayout.length)}
+            >
               <Check size={16} />
               {isCompleting ? 'Analyzing…' : 'Done'}
             </Button>
@@ -409,13 +703,37 @@ const ParkinsonsTest: React.FC = () => {
         {submitDone && (
           <Controls>
             <Button $variant="primary" onClick={handleHarnessNext}>
-              {getNextTaskId(task.id, 'parkinsons') ? 'Next task' : 'View all results'}
+              {taskIndex < totalSteps - 1 ? 'Next task' : 'View all results'}
             </Button>
             <Button onClick={() => navigate('/parkinsons')}>
               <Home size={16} />
               Home
             </Button>
           </Controls>
+        )}
+
+        {submitDone && taskResult && (
+          <TaskResultCard>
+            <TaskResultTitle>Task result for {task.name}</TaskResultTitle>
+            <TaskResultGrid>
+              <TaskResultItem>
+                <TaskResultLabel>Risk level</TaskResultLabel>
+                <TaskResultValue>{riskLabel}</TaskResultValue>
+              </TaskResultItem>
+              <TaskResultItem>
+                <TaskResultLabel>Probability</TaskResultLabel>
+                <TaskResultValue>{probabilityPercent !== null ? `${probabilityPercent}%` : 'N/A'}</TaskResultValue>
+              </TaskResultItem>
+              <TaskResultItem>
+                <TaskResultLabel>Pressure</TaskResultLabel>
+                <TaskResultValue>{taskResult?.biomarkers?.pressure != null ? `${Math.round(taskResult.biomarkers.pressure * 100)}%` : 'N/A'}</TaskResultValue>
+              </TaskResultItem>
+              <TaskResultItem>
+                <TaskResultLabel>Spatial accuracy</TaskResultLabel>
+                <TaskResultValue>{taskResult?.biomarkers?.spatialAccuracy != null ? `${Math.round(taskResult.biomarkers.spatialAccuracy * 100)}%` : 'N/A'}</TaskResultValue>
+              </TaskResultItem>
+            </TaskResultGrid>
+          </TaskResultCard>
         )}
       </TestHarness>
     </Container>
