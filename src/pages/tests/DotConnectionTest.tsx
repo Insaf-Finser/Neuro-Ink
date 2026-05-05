@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { Check, CheckCircle, AlertCircle, Clock } from 'lucide-react';
@@ -178,14 +178,37 @@ const DotConnectionTest: React.FC = () => {
   const [deviationScore, setDeviationScore] = useState<number | null>(null);
   const [currentPath, setCurrentPath] = useState<StylusPoint[]>([]);
   const { completeTaskAndNavigate, isCompleting } = useTaskCompletion();
-  const dotLayout = useMemo(
-    () => [
-      { n: 1, top: 22, left: 20 },
-      { n: 2, top: 20, left: 50 },
-      { n: 3, top: 26, left: 80 },
-    ],
-    []
-  );
+  const DOT_COUNT = 10;
+  const [dotLayout, setDotLayout] = useState<Array<{ n: number; top: number; left: number }>>([]);
+
+  const generateDotLayout = (count: number) => {
+    const dots: Array<{ n: number; top: number; left: number }> = [];
+    const minDist = 12; // percentage distance between dots
+    let attempts = 0;
+    while (dots.length < count && attempts < 500) {
+      attempts++;
+      const candidate = {
+        n: dots.length + 1,
+        top: 12 + Math.random() * 76,
+        left: 10 + Math.random() * 80,
+      };
+      const tooClose = dots.some(d => Math.hypot(d.left - candidate.left, d.top - candidate.top) < minDist);
+      if (!tooClose) dots.push(candidate);
+    }
+    // Fallback: if we couldn't place all with spacing, just fill remaining randomly.
+    while (dots.length < count) {
+      dots.push({
+        n: dots.length + 1,
+        top: 12 + Math.random() * 76,
+        left: 10 + Math.random() * 80,
+      });
+    }
+    return dots;
+  };
+
+  useEffect(() => {
+    setDotLayout(generateDotLayout(DOT_COUNT));
+  }, []);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -248,6 +271,7 @@ return 0;
     setLastReachedIndex(-1);
     setDeviationScore(null);
     setCurrentPath([]);
+    setDotLayout(generateDotLayout(DOT_COUNT));
   };
 
   const pointToNorm = (p: StylusPoint) => {
@@ -316,7 +340,7 @@ return 0;
 
   const instructions = (
     <Instructions>
-      <InstructionText>• Connect the 3 dots in strict order (1 → 2 → 3)</InstructionText>
+      <InstructionText>• Connect the {DOT_COUNT} dots in strict order (1 → {DOT_COUNT})</InstructionText>
       <InstructionText>• Start exactly on the current expected dot</InstructionText>
       <InstructionText>• Try to draw straight and steady between dots</InstructionText>
       <InstructionText style={{ marginTop: '12px', fontWeight: 700 }}>

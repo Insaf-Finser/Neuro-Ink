@@ -386,15 +386,38 @@ const ParkinsonsTest: React.FC = () => {
   const [dotLastReachedIndex, setDotLastReachedIndex] = useState(-1);
   const [dotCurrentPath, setDotCurrentPath] = useState<any[]>([]);
   const submitStartedRef = useRef(false);
-  const dotLayout = useMemo(
-    () => [
-      { n: 1, top: 22, left: 20 },
-      { n: 2, top: 20, left: 50 },
-      { n: 3, top: 26, left: 80 },
-    ],
-    []
-  );
+  const DOT_COUNT = 10;
+  const [dotLayout, setDotLayout] = useState<Array<{ n: number; top: number; left: number }>>([]);
   const isDotTask = task?.id === 'dot_target_tapping';
+  const generateDotLayout = (count: number) => {
+    const dots: Array<{ n: number; top: number; left: number }> = [];
+    const minDist = 12;
+    let attempts = 0;
+    while (dots.length < count && attempts < 500) {
+      attempts++;
+      const candidate = {
+        n: dots.length + 1,
+        top: 12 + Math.random() * 76,
+        left: 10 + Math.random() * 80,
+      };
+      const tooClose = dots.some(d => Math.hypot(d.left - candidate.left, d.top - candidate.top) < minDist);
+      if (!tooClose) dots.push(candidate);
+    }
+    while (dots.length < count) {
+      dots.push({
+        n: dots.length + 1,
+        top: 12 + Math.random() * 76,
+        left: 10 + Math.random() * 80,
+      });
+    }
+    return dots;
+  };
+
+  useEffect(() => {
+    if (isDotTask) {
+      setDotLayout(generateDotLayout(DOT_COUNT));
+    }
+  }, [isDotTask, taskId]);
   const isMazeTask = task?.id === 'maze_path_trace';
   const [selectedMazePath, setSelectedMazePath] = useState<string[]>([]);
   const mazeNodes: MazeNode[] = [
@@ -507,6 +530,9 @@ const ParkinsonsTest: React.FC = () => {
     setDotConnectedIndices([]);
     setDotLastReachedIndex(-1);
     setDotCurrentPath([]);
+    if (isDotTask) {
+      setDotLayout(generateDotLayout(DOT_COUNT));
+    }
     canvasRef.current?.clear();
   }, [taskId, task?.timeLimit]);
 
@@ -582,6 +608,9 @@ const ParkinsonsTest: React.FC = () => {
     setDotConnectedIndices([]);
     setDotLastReachedIndex(-1);
     setDotCurrentPath([]);
+    if (isDotTask) {
+      setDotLayout(generateDotLayout(DOT_COUNT));
+    }
     submitStartedRef.current = false;
   };
 
@@ -646,7 +675,7 @@ const ParkinsonsTest: React.FC = () => {
       )}
       {isDotTask && (
         <InstructionText style={{ marginTop: 8 }}>
-          Connect dots in exact order: 1 → 2 → 3
+          Connect dots in exact order: 1 → {DOT_COUNT}
         </InstructionText>
       )}
     </Instructions>
